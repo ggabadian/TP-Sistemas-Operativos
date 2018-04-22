@@ -1,10 +1,10 @@
 /*
  ============================================================================
- Name        : Coordinador.c
+ Name        : Instancia.c
  Author      : Microblando Ventanas
  Version     : 0.1
  Copyright   :
- Description : Coordinador
+ Description : Instancia
  ============================================================================
  */
 
@@ -13,6 +13,6 @@
 #include <commons/log.h>
 
 int main(void) {
-	puts("!!!Hello Coordinador!!!");
+	puts("!!!Hello Instancia!!!");
 	return EXIT_SUCCESS;
 }
