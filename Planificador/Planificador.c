@@ -62,7 +62,7 @@ int main() {
 		//send(connect,mensaje,strlen(mensaje),0);
 		mensaje = NULL;
 
-		char* buffer = malloc(4); //buffer donde voy a almacenar lo que reciba
+		char* buffer = malloc(16); //buffer donde voy a almacenar lo que reciba
 		int bytesRecibidos = recv(connect,(void*) buffer, 4, 0); //MSG_WAITALL
 		if (bytesRecibidos <= 0) { //devuelve negativo si hay un error del otro lado de la conexion
 			perror("el cliente se desconecto");
