@@ -1,0 +1,6 @@
+#Archivos generables por Eclipse
+.cproject
+.project
+
+#Carpeta de debug
+Debug/
