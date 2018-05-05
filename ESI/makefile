@@ -1,9 +1,8 @@
-all: esi 
+COMMONS = -lcommons
 
-esi: esi.o
-		gcc -o esi ESI.o
-esi.o: ESI.c
-		gcc -c ESI.c
+all: clean esi 
 
-cleans:
-		@rm -f esi.o
+esi: 
+		gcc ESI.c -o esi
+clean:
+		rm -f esi

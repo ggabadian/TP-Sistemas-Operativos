@@ -1,9 +1,8 @@
-all: Coordinador 
+COMMONS = -lcommons
 
-Coordinador: Coordinador.o
-		gcc -o Coordinador Coordinador.o
-Coordinador.o: Coordinador.c
-		gcc -c Coordinador.c
+all: clean Coordinador
 
+Coordinador: 
+		gcc Coordinador.c -o Coordinador $(COMMONS)
 clean:
-		@rm -f Coordinador.o
+		rm -f Coordinador

@@ -11,7 +11,7 @@ int main(void) {
 	struct sockaddr_in direccionDelServidor;
 	direccionDelServidor.sin_family = AF_INET;
 	direccionDelServidor.sin_addr.s_addr = inet_addr("127.0.0.1");
-	direccionDelServidor.sin_port = htons(5000);
+	direccionDelServidor.sin_port = htons(5001);
 	while(1){
 		int cliente = socket(AF_INET, SOCK_STREAM, 0);//guardo el id del socket del cliente
 		//me intento conectar, si falla la conexion(<0) manejo el error
