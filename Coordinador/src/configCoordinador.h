@@ -10,10 +10,20 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <commons/log.h>
+#include <commons/config.h>
+#include <commons/string.h>
 
-#define PUERTO "5000"
-#define BACKLOG 5				// Lectura de coordinador.config pendiente
-#define PACKAGESIZE 1024
+// Campos del coordinador.config
+char *IP;
+char *PUERTO;
+int BACKLOG;
+int PACKAGESIZE;
+// -----------------------------
 
+int newSocket();
+void cargarConfig();
+
+// Ubicacion del archivo coordinador.config
+#define PATH_COORDINADOR_CONFIG "/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/Coordinador/coordinador.config"
 
 #endif /* COORDINADOR_SRC_CONFIGCOORDINADOR_H_ */

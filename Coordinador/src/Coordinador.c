@@ -1,9 +1,9 @@
 #include "Coordinador.h"
-
 #include "configCoordinador.c"
 
 int main(void) {
 	puts("Iniciando coordinador...");
+	cargarConfig();
 
 	int listeningSocket = newSocket();
 
@@ -19,7 +19,7 @@ int main(void) {
 	char package[PACKAGESIZE];
 	int status = 1;
 
-	// Discriminacion de clientes pendiente
+	// (Pendiente) Discriminacion de clientes
 	printf("Cliente conectado, esperando mensaje.\n");
 
 	while (status != 0) {
