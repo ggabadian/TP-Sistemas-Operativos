@@ -1,11 +1,10 @@
 #include "Coordinador.h"
-#include "configCoordinador.c"
 
 int main(void) {
 	puts("Iniciando coordinador...");
 	cargarConfig();
 
-	int listeningSocket = newSocket();
+	int listeningSocket = newSocket(PUERTO);
 
 	listen(listeningSocket, BACKLOG);
 

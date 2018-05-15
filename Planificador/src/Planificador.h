@@ -11,11 +11,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <commons/log.h>
+#include "../../libs/conexion.c"
 
 void consola();
 
-#define PUERTO "5000"
-#define BACKLOG 5
+char* PUERTO = "5000";
+#define BACKLOG 5				//(Pendiente) Carga desde config
 #define PACKAGESIZE 1024
 
 

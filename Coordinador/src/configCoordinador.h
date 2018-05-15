@@ -20,7 +20,6 @@ int BACKLOG;
 int PACKAGESIZE;
 // -----------------------------
 
-int newSocket();
 void cargarConfig();
 
 // Ubicacion del archivo coordinador.config
