@@ -4,16 +4,13 @@ int main(void) {
 	puts("Iniciando coordinador...");
 	cargarConfig();
 
-	int listeningSocket = newSocket(PUERTO);
+	int listeningSocket = listenSocket(PUERTO);
 
 	listen(listeningSocket, BACKLOG);
 
 	puts("Esperando cliente.");
 
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-
-	int socketCliente = accept(listeningSocket, (struct sockaddr *) &addr, &addrlen);
+	int socketCliente = acceptSocket(listeningSocket);
 
 	char package[PACKAGESIZE];
 	int status = 1;

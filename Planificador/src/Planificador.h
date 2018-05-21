@@ -11,7 +11,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <commons/log.h>
-#include "../../libs/conexion.c"
+
+#include "../../libs/socketServer.c"
 
 void consola();
 

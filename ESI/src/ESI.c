@@ -3,20 +3,7 @@
 int main(void) {
 	puts("Hola soy el ESI");
 
-	struct addrinfo hints;
-	struct addrinfo *planificadorInfo;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	getaddrinfo(IP, PUERTO, &hints, &planificadorInfo);
-
-	int planificadorSocket;
-	planificadorSocket = socket(planificadorInfo->ai_family, planificadorInfo->ai_socktype,planificadorInfo->ai_protocol);
-
-	connect(planificadorSocket, planificadorInfo->ai_addr, planificadorInfo->ai_addrlen);
-	freeaddrinfo(planificadorInfo);
+	int planificadorSocket = connectSocket(IP, PUERTO);
 
 	int enviar = 1;
 	char message[PACKAGESIZE];

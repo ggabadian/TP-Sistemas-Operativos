@@ -77,14 +77,10 @@ void consola() {
 int main() {
 	puts("Hola soy el planificador");
 
-	int listeningSocket = newSocket(PUERTO);
+	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
 
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-
-	int socketCliente = accept(listeningSocket, (struct sockaddr *) &addr,
-			&addrlen);
+	int socketCliente = acceptSocket(listeningSocket);
 
 	char package[PACKAGESIZE];
 	int status = 1;

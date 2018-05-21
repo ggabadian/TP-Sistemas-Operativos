@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <commons/log.h>
+#include "../../libs/socketClient.c"
 
 
 #define IP "127.0.0.1"
