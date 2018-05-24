@@ -14,10 +14,11 @@
 #include <commons/string.h>
 
 // Campos del coordinador.config
-char *IP;
 char *PUERTO;
-int BACKLOG;
-int PACKAGESIZE;
+char *ALGORITMO;
+int CANTIDAD_ENTRADAS;
+int BYTES_ENTRADA;
+int RETARDO;
 // -----------------------------
 
 void cargarConfig();
