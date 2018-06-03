@@ -6,17 +6,26 @@ int main(void) {
 
 	int listeningSocket = listenSocket(PUERTO);
 
-	listen(listeningSocket, 5);
+	listen(listeningSocket, 32);
 
 	puts("Esperando cliente.");
 
+	int status = 0;
+	char identificador[4]; // Por PROTOCOLO
+
 	int socketCliente = acceptSocket(listeningSocket);
 
-	char package[1024];
-	int status = 1;
+	status= recv(socketCliente, identificador, 4, 0);
+	if (status != 0) {
+		printf("Conectado a %s.\n", identificar(identificador));
+	} else {
+		puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
+		//(Pendiente) log error
+	}
 
-	// (Pendiente) Discriminacion de clientes
-	printf("Cliente conectado, esperando mensaje.\n");
+	char package[1024];
+
+	//(Pendiente) Hilos
 
 	while (status != 0) {
 		status = recv(socketCliente, (void*) package, 1024, 0);
