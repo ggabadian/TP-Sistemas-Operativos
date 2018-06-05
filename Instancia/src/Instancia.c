@@ -5,6 +5,7 @@ bool conectarCoordinador(){
 	puts("Conectando al coordinador");
 
 	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
+	send(SOCKET_COORDINADOR, INSTANCIA, 4, 0); // Le avisa que es una INSTANCIA
 
 	return true;
 }
