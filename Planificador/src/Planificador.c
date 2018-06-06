@@ -76,6 +76,14 @@ void consola() {
 
 int main() {
 	puts("Hola soy el planificador");
+	cargarConfigPlanificador();
+//	printf("PUERTO= %s\n", PUERTO);
+//	printf("ALGORITMO= %s\n", ALGORITMO);
+//	printf("ALFA= %d\n", ALFA);
+//	printf("ESTIMACION= %d\n", ESTIMACION_I);
+//	printf("IP COORDINADOR= %s\n", IP_COORDINADOR);
+//	printf("PUERTO COORDINADOR= %d\n", PUERTO_COORDINADOR);
+//	printf("CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
 
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
