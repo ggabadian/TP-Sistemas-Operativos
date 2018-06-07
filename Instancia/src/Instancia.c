@@ -70,18 +70,7 @@ bool cargaInicial(){
 
 	recibirDeCoordinadorCargaInicial(&cantidadEntradas, &tamanioEntradas);
 
-
-	// ---- parsear los parametros que me da el coordinador y guardarlos donde corresponda ----
-
-
-	/*if (strcmp(accion, initDataInstancia)){
-		arrayParametros = string_split(dato, ",");
-		cantidadEntradas = arrayParametros[0];
-		tamanioEntradas = arrayParametros[1];
-		montaje = arrayParametros[2];
-
-	}*/
-	sleep(1);
+	void* memoria = calloc(cantidadEntradas, tamanioEntradas);
 	return true;
 }
 

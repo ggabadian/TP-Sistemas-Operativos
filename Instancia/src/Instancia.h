@@ -29,4 +29,9 @@ char* ALGORITMO;
 int INTERVALO_DUMP;
 
 
+typedef struct DatoEntrada{
+	int numeroEntrada;
+	int tamanio;
+} DatoEntrada;
+
 #endif
