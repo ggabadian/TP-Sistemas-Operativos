@@ -19,7 +19,7 @@ coordinador:
 
 planificador:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) Planificador/src/Planificador.h Planificador/src/Planificador.c $(LIBS) -o $(BIN_PATH)/Planificador
+	$(COMPILER) Planificador/src/Planificador.h Planificador/src/Planificador.c Planificador/src/configPlanificador.c $(LIBS) -o $(BIN_PATH)/Planificador
 
 instancia:
 	mkdir -p $(BIN_PATH)
@@ -27,4 +27,4 @@ instancia:
 
 esi:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) ESI/src/ESI.h ESI/src/ESI.c $(LIBS) -o $(BIN_PATH)/ESI
+	$(COMPILER) ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(LIBS) -o $(BIN_PATH)/ESI
