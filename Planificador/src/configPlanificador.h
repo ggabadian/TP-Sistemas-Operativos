@@ -19,8 +19,8 @@ char *PUERTO;
 char *ALGORITMO;
 int ALFA;
 int ESTIMACION_I;
-char* IP_COORDINADOR;
-int PUERTO_COORDINADOR;
+char *IP_COORDINADOR;
+char *PUERTO_COORDINADOR;
 char** CL_BLOQUEADAS;
 // -----------------------------
 

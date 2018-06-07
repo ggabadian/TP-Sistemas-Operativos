@@ -105,7 +105,7 @@ int main() {
 	close(socketCliente);
 	close(listeningSocket);
 
-	consola();
+//	consola();
 
 	return 0;
 }

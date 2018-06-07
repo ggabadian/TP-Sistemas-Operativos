@@ -6,11 +6,10 @@
 
 #include "../../libs/socketServer.c"
 #include "../../libs/socketClient.c"
-#include "configPlanificador.c"
+#include "configPlanificador.h"
 
 void consola();
 
-char* PUERTO = "5000";
 #define BACKLOG 5				//(Pendiente) Carga desde config
 #define PACKAGESIZE 1024
 
