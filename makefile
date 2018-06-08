@@ -23,7 +23,7 @@ planificador:
 
 instancia:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) Instancia/src/Instancia.h Instancia/src/Instancia.c $(LIBS) -o $(BIN_PATH)/Instancia
+	$(COMPILER) Instancia/src/Instancia.h Instancia/src/Instancia.c Instancia/src/configInstancia.c $(LIBS) -o $(BIN_PATH)/Instancia
 
 esi:
 	mkdir -p $(BIN_PATH)

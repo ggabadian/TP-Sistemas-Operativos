@@ -124,6 +124,8 @@ void finDumping(){
 }
 
 int main(void) {
+	cargarConfig();
+
 	int estado;
 	/* 0: No Conectada
 	 * 1: Conectada, configurandose
