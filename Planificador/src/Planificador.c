@@ -88,12 +88,19 @@ int main() {
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
 
+	int status = 0;
+	char identificador[4]; // Por PROTOCOLO
+
 	int socketCliente = acceptSocket(listeningSocket);
 
-	char package[PACKAGESIZE];
-	int status = 1;
+	status= recv(socketCliente, identificador, 4, 0);
+	if (status != 0) {
+		printf("Conectado a %s.\n", identificar(identificador));
+	} else {
+		puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
+	}
 
-	printf("Cliente conectado. Esperando mensajes:\n");
+	char package[PACKAGESIZE];
 
 	while (status != 0) {
 		status = recv(socketCliente, (void*) package, PACKAGESIZE, 0);

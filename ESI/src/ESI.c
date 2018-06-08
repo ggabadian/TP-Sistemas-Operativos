@@ -25,6 +25,7 @@ int main(void) {
 
 	int planificadorSocket = connectSocket(IP_PLANIFICADOR, PUERTO_PLANIFICADOR);
 	printf("Conectado a Planificador. \n");
+	send(planificadorSocket, ESI, 4, 0); // Le avisa que es un ESI
 
 	int enviar = 1;
 	char message[PACKAGESIZE];

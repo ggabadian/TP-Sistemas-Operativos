@@ -3,10 +3,10 @@
 #define PLANIFICADOR_H_
 
 
-
+#include "configPlanificador.h"
 #include "../../libs/socketServer.c"
 #include "../../libs/socketClient.c"
-#include "configPlanificador.h"
+#include "../../libs/protocolo.c"
 
 void consola();
 

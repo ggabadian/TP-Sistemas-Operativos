@@ -2,8 +2,6 @@
 
 #include "socketClient.h"
 
-#include <unistd.h>
-
 int connectToServer(char *ip, char *puerto){
 
 	struct addrinfo hints;
