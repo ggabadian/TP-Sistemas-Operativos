@@ -75,7 +75,7 @@ void consola() {
 }
 
 int main() {
-	puts("Hola soy el planificador");
+	puts("Iniciando planificador...");
 	cargarConfigPlanificador();
 //	printf("PUERTO= %s\n", PUERTO);
 //	printf("ALGORITMO= %s\n", ALGORITMO);
@@ -91,6 +91,8 @@ int main() {
 	int status = 0;
 	char identificador[4]; // Por PROTOCOLO
 
+	int idESI = 0; // Cantidad de ESIs conectados
+
 	int socketCliente = acceptSocket(listeningSocket);
 
 	status= recv(socketCliente, identificador, 4, 0);
@@ -98,6 +100,11 @@ int main() {
 		printf("Conectado a %s.\n", identificar(identificador));
 	} else {
 		puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
+	}
+
+	if (!strcmp(identificador, ESI)) { // Si es un ESI, le asigna un id
+		idESI ++;
+		send(socketCliente, &idESI, sizeof(idESI), 0);
 	}
 
 	char package[PACKAGESIZE];

@@ -1,6 +1,6 @@
 #include "ESI.h"
 
-int id; //Este es el ID del ESI. Lo provee el Planificador en el handshake
+int id = 0; //Este es el ID del ESI. Lo provee el Planificador en el handshake
 
 int main(void) {
 	puts("Iniciando ESI...");
@@ -19,6 +19,8 @@ int main(void) {
 	10. Volver a 5.
 */
 
+	int status = 0;
+
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
 	send(coordinadorSocket, ESI, 4, 0); // Le avisa que es un ESI
@@ -26,6 +28,14 @@ int main(void) {
 	int planificadorSocket = connectSocket(IP_PLANIFICADOR, PUERTO_PLANIFICADOR);
 	printf("Conectado a Planificador. \n");
 	send(planificadorSocket, ESI, 4, 0); // Le avisa que es un ESI
+	status = recv(planificadorSocket, &id, sizeof(id), 0); // Recibe el id asignado por el Planificador
+	if (status != 0) {
+		printf("Este es el ESI %d.\n", id);
+	} else {
+		puts("ERROR: El planificador no pudo asignar un id.\n");
+	}
+
+	//OBS: El ID funciona con un solo ESI, supongo que es porque faltan los hilos en el Planificador
 
 	int enviar = 1;
 	char message[PACKAGESIZE];
@@ -35,7 +45,7 @@ int main(void) {
 		if (!strcmp(message, "exit\n"))
 			enviar = 0;
 		if (enviar)
-			send(coordinadorSocket, message, strlen(message) + 1, 0);
+			send(planificadorSocket, message, strlen(message) + 1, 0);
 	}
 
 	close(coordinadorSocket);
