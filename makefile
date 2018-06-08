@@ -27,4 +27,4 @@ instancia:
 
 esi:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(LIBS) -o $(BIN_PATH)/ESI
+	$(COMPILER) ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(LIBS)-lparsi -o $(BIN_PATH)/ESI
