@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <commons/string.h>
 #include <commons/log.h>
+#include <commons/collections/list.h>
 #include "../../libs/socketClient.c"
 #include "../../libs/protocolo.c"
 
@@ -31,7 +32,9 @@ int INTERVALO_DUMP;
 
 typedef struct DatoEntrada{
 	int numeroEntrada;
+	char* clave[40];
 	int tamanio;
+	int* posicionEnMemoria;
 } DatoEntrada;
 
 #endif

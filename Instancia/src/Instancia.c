@@ -1,12 +1,13 @@
 #include "Instancia.h"
+#include <string.h>
 
 bool conectarCoordinador(){
 	//conecta mediante un socket la instancia con el coordinador
 	puts("Conectando al coordinador");
-
+/*
 	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	send(SOCKET_COORDINADOR, INSTANCIA, 4, 0); // Le avisa que es una INSTANCIA
-
+*/
 	return true;
 }
 
@@ -52,13 +53,19 @@ bool recibirDeCoordinadorCargaInicial(int *cantidadEntradas,int *tamanioEntradas
 	char** datos;
 	if(accion == "4000"){
 		datos = string_split(dato, "|");
-		ALGORITMO = datos[0];
-		PUNTO_MONTAJE = datos[1];
-		NOMBRE = datos[2];
-		INTERVALO_DUMP = (int) datos[3];
-		*cantidadEntradas = (int) datos[4];
-		*tamanioEntradas = (int) datos[5];
+		ALGORITMO         = datos[0];
+		PUNTO_MONTAJE     = datos[1];
+		NOMBRE            = datos[2];
+		INTERVALO_DUMP    = atoi (datos[3]);
+		*cantidadEntradas = atoi (datos[4]);
+		*tamanioEntradas  = atoi (datos[5]);
 	}
+	printf("-Algoritmo: %s "             , ALGORITMO     );
+	printf("-Punto de montaje: %s \n"    , PUNTO_MONTAJE );
+	printf("-Nombre: %s \n"              , NOMBRE        );
+	printf("-Intervalo de dump: %d \n"   , INTERVALO_DUMP);
+	printf("-Cantidad de entradas: %d \n", *cantidadEntradas);
+	printf("-Tamaño de entradas: %d \n"  , *tamanioEntradas);
 	return true;
 }
 
@@ -71,7 +78,25 @@ bool cargaInicial(){
 
 	recibirDeCoordinadorCargaInicial(&cantidadEntradas, &tamanioEntradas);
 
-	void* memoria = calloc(cantidadEntradas, tamanioEntradas);
+	printf("-Cantidad de entradas: %d \n", cantidadEntradas);
+	printf("-Tamaño de entradas: %d \n"  , tamanioEntradas);
+
+	t_list *listaDeEntradas = list_create();
+
+
+
+	/*char* memoria = (char *)calloc(cantidadEntradas, tamanioEntradas);
+
+	if (*memoria == NULL){
+		printf("No se puedo asignar");
+	}else{
+		char* unaPalabra = string_new();
+		char* otraPalabra = string_new();
+		string_append(&unaPalabra, "Primer elemento");
+		string_append(&otraPalabra, "Segunto elemento");
+		strcpy(*memoria,*unaPalabra);
+		strcpy(*memoria+1,*otraPalabra);
+	}*/
 	return true;
 }
 
