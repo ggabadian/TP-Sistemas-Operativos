@@ -88,21 +88,25 @@ int main() {
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
 
+	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
+	printf("Conectado a Coordinador. \n");
+	send(coordinadorSocket, &PLANIFICADOR, 1, 0); // Le avisa que es el planificador
+
 	int status = 0;
-	char identificador[4]; // Por PROTOCOLO
+	char identificador; // Por PROTOCOLO
 
 	int idESI = 0; // Cantidad de ESIs conectados
 
 	int socketCliente = acceptSocket(listeningSocket);
 
-	status= recv(socketCliente, identificador, 4, 0);
+	status= recv(socketCliente, &identificador, 1, 0);
 	if (status != 0) {
 		printf("Conectado a %s.\n", identificar(identificador));
 	} else {
 		puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
 	}
 
-	if (!strcmp(identificador, ESI)) { // Si es un ESI, le asigna un id
+	if (identificador==ESI) { // Si es un ESI, le asigna un id
 		idESI ++;
 		send(socketCliente, &idESI, sizeof(idESI), 0);
 	}

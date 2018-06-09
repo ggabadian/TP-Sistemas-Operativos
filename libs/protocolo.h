@@ -4,10 +4,10 @@
 
 //IDENTIFICADORES
 //Ocupan 4 bytes
-char* COORDINADOR = "1";
-char* PLANIFICADOR = "2";
-char* ESI = "3";
-char* INSTANCIA = "4";
+char COORDINADOR = '1';
+char PLANIFICADOR = '2';
+char ESI = '3';
+char INSTANCIA = '4';
 //---------------
 
 #endif /* LIBS_PROTOCOLO_H_ */

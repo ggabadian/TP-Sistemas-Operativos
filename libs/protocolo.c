@@ -27,17 +27,17 @@ enum Head {
 };
 
 // Para HANDSHAKE
-char* identificar(char* id) {
-	if (!strcmp(id, COORDINADOR)){
+char* identificar(char id) {
+	if (id==COORDINADOR){
 		return "Coordinador";
 	}
-	else if (!strcmp(id, PLANIFICADOR)) {
+	else if (id==PLANIFICADOR) {
 		return "Planificador";
 	}
-	else if (!strcmp(id, ESI)) {
+	else if (id==ESI) {
 		return "ESI";
 	}
-	else if (!strcmp(id, INSTANCIA)) {
+	else if (id==INSTANCIA) {
 		return "Instancia";
 	}
 	else {
