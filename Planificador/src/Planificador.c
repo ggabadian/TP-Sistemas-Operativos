@@ -86,11 +86,12 @@ int main() {
 //	printf("CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
 
 	int listeningSocket = listenSocket(PUERTO);
-	listen(listeningSocket, BACKLOG);
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
 	send(coordinadorSocket, &PLANIFICADOR, 1, 0); // Le avisa que es el planificador
+
+	listen(listeningSocket, BACKLOG);
 
 	int status = 0;
 	char identificador; // Por PROTOCOLO
