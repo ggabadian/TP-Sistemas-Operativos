@@ -1,8 +1,18 @@
 #include "Coordinador.h"
 #include "configCoordinador.h"
 
+struct stPlanificador {
+	int socketPlanificador;
+//	otras cosas
+};
+
 struct stESI {
 	int socketESI;
+//	otras cosas
+};
+
+struct stInstancia {
+	int socketInstancia;
 //	otras cosas
 };
 
@@ -20,8 +30,6 @@ int main(void) {
 		int status = 0;
 		int identificador;
 
-		pthread_t thread;
-
 		int socketCliente = acceptSocket(listeningSocket);
 
 		status= recv(socketCliente, &identificador, 4, 0);
@@ -31,17 +39,8 @@ int main(void) {
 			puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
 			//(Pendiente) log error
 		}
-		if(identificador == ESI){
-			int statusESI = 1;
-			struct stESI estESI;
-			estESI.socketESI = socketCliente;
 
-			statusESI = pthread_create(&thread, NULL, &threadESI, (void*) &estESI);
-		    if(statusESI){
-		    	puts("Error en la creación de thread para ESI");
-		    	//(Pendiente) log error
-		    }
-		}
+		crearThread(identificador, socketCliente);
 	}
 
 	close(listeningSocket);
@@ -49,13 +48,72 @@ int main(void) {
 }
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
+//(Pendiente) BUG - Warning en status
+
+void crearThread(int id, int socket){
+	pthread_t thread;
+
+	if (id == PLANIFICADOR){
+		int statusPlanificador = 1;
+		struct stPlanificador estPlanificador;
+		estPlanificador.socketPlanificador = socket;
+
+		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador, (void*) &estPlanificador);
+		if(statusPlanificador){
+			puts("Error en la creación de thread para Planificador");
+			//(Pendiente) log error
+		}
+	}
+	else if (id == ESI){
+		int statusESI = 1;
+		struct stESI estESI;
+		estESI.socketESI = socket;
+
+		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) &estESI);
+		if(statusESI){
+			puts("Error en la creación de thread para ESI");
+			//(Pendiente) log error
+		}
+	}
+	else if (id == INSTANCIA){
+		int statusInstancia = 1;
+		struct stInstancia estInstancia;
+		estInstancia.socketInstancia = socket;
+
+		statusInstancia = pthread_create(&thread, NULL, &threadInstancia, (void*) &estInstancia);
+		if(statusInstancia){
+			puts("Error en la creación de thread para Instancia");
+			//(Pendiente) log error
+		}
+	}
+	else {
+		puts("Error al crear thread: La conexión es desconocida");
+		//(Pendiente) log error
+	}
+}
+
+void threadPlanificador(void* estructura){
+	struct stPlanificador* ePlanificador = (struct stPlanificador*) estructura;
+
+	recibirMensaje(ePlanificador->socketPlanificador);
+
+	free(ePlanificador);
+}
 
 void threadESI(void* estructura){
-	struct stESI* estructuraESI = (struct stESI*) estructura;
+	struct stESI* eESI = (struct stESI*) estructura;
 
-	recibirMensaje(estructuraESI->socketESI);
+	recibirMensaje(eESI->socketESI);
 
-	free(estructuraESI);
+	free(eESI);
+}
+
+void threadInstancia(void* estructura){
+	struct stInstancia* eInstancia = (struct stInstancia*) estructura;
+
+	recibirMensaje(eInstancia->socketInstancia);
+
+	free(eInstancia);
 }
 
 void recibirMensaje(int socket){

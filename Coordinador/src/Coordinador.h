@@ -6,7 +6,10 @@
 #include "../../libs/protocolo.c"
 #include <pthread.h>
 
+void crearThread(int, int);
+void threadPlanificador(void*);
 void threadESI(void*);
+void threadInstancia(void*);
 void recibirMensaje(int);
 
 #endif
