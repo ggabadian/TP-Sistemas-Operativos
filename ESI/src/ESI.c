@@ -20,7 +20,7 @@ int main(void) {
 	 */
 
 	int status = 0;
-
+/*
 	int planificadorSocket = connectSocket(IP_PLANIFICADOR, PUERTO_PLANIFICADOR);
 	printf("Conectado a Planificador. \n");
 	send(planificadorSocket, &ESI, 4, 0); // Le avisa que es un ESI
@@ -30,7 +30,7 @@ int main(void) {
 	} else {
 		puts("ERROR: El planificador no pudo asignar un id.\n");
 	}
-
+*/
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
 	send(coordinadorSocket, &ESI, 4, 0); // Le avisa que es un ESI
@@ -38,13 +38,13 @@ int main(void) {
 	int enviar = 1;
 	char message[PACKAGESIZE];
 
-//	while (enviar) {
-//		fgets(message, PACKAGESIZE, stdin);
-//		if (!strcmp(message, "exit\n"))
-//			enviar = 0;
-//		if (enviar)
-//			send(planificadorSocket, message, strlen(message) + 1, 0);
-//	}
+	while (enviar) {
+		fgets(message, PACKAGESIZE, stdin);
+		if (!strcmp(message, "exit\n"))
+			enviar = 0;
+		if (enviar)
+			send(coordinadorSocket, message, strlen(message) + 1, 0);
+	}
 
 	close(coordinadorSocket);
 //	close(planificadorSocket);

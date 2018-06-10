@@ -1,6 +1,6 @@
 COMPILER=gcc
 BIN_PATH=bin
-LIBS = -lcommons # Define referencias a commons
+LIBS = -lcommons -pthread # Define referencias
 
 all: clean coordinador planificador instancia esi
 
