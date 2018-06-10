@@ -35,7 +35,7 @@
 // -------- HEADs --------
 
 	int COORDINADOR = 100;
-//	otraCosaDelCoordinador = 101,
+	int initDatosInstancia = 101;
 
 	int PLANIFICADOR = 200;
 //	otraCosaDelPlanificador = 201,

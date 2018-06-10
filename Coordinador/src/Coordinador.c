@@ -13,7 +13,8 @@ struct stESI {
 
 struct stInstancia {
 	int socketInstancia;
-//	otras cosas
+	int cantidadEntradas;
+	int sizeofEntrada;
 };
 
 int main(void) {
@@ -49,6 +50,8 @@ int main(void) {
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
 //(Pendiente) BUG - Warning en status
+//(Pendiente) BUG - Si se cierra una entidad (que estaba conectada al Coordinador),
+//					el Coordinador se rompe
 
 void crearThread(int id, int socket){
 	pthread_t thread;
@@ -79,6 +82,8 @@ void crearThread(int id, int socket){
 		int statusInstancia = 1;
 		struct stInstancia estInstancia;
 		estInstancia.socketInstancia = socket;
+		estInstancia.cantidadEntradas = 25;
+		estInstancia.sizeofEntrada = 10;
 
 		statusInstancia = pthread_create(&thread, NULL, &threadInstancia, (void*) &estInstancia);
 		if(statusInstancia){
@@ -111,6 +116,8 @@ void threadESI(void* estructura){
 void threadInstancia(void* estructura){
 	struct stInstancia* eInstancia = (struct stInstancia*) estructura;
 
+	sendInitInstancia(eInstancia->socketInstancia, eInstancia->cantidadEntradas, eInstancia->sizeofEntrada);
+
 	recibirMensaje(eInstancia->socketInstancia);
 
 	free(eInstancia);
@@ -124,4 +131,22 @@ void recibirMensaje(int socket){
 	}
 	close(socket);
 	free(package);
+}
+
+void sendInitInstancia(int socket, int cantEntradas, int sizeEntrada){
+	struct estMensaje {
+		int cantidadEntradas;
+		int sizeofEntrada;
+	} paquete;
+
+	paquete.cantidadEntradas = cantEntradas;
+	paquete.sizeofEntrada = sizeEntrada;
+
+	// Envia el HEAD para que la instancia sepa lo que va a recibir
+	send(socket, &initDatosInstancia, 4, 0); // Por PROTOCOLO;
+
+	//Envia el paquete
+	send(socket, (void*) &paquete, sizeof(paquete), 0);
+
+	puts("Configuración inicial enviada a Instancia.");
 }

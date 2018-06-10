@@ -11,5 +11,6 @@ void threadPlanificador(void*);
 void threadESI(void*);
 void threadInstancia(void*);
 void recibirMensaje(int);
+void sendInitInstancia(int, int, int);
 
 #endif
