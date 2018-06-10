@@ -38,16 +38,16 @@ int main(void) {
 	int enviar = 1;
 	char message[PACKAGESIZE];
 
-	while (enviar) {
-		fgets(message, PACKAGESIZE, stdin);
-		if (!strcmp(message, "exit\n"))
-			enviar = 0;
-		if (enviar)
-			send(planificadorSocket, message, strlen(message) + 1, 0);
-	}
+//	while (enviar) {
+//		fgets(message, PACKAGESIZE, stdin);
+//		if (!strcmp(message, "exit\n"))
+//			enviar = 0;
+//		if (enviar)
+//			send(planificadorSocket, message, strlen(message) + 1, 0);
+//	}
 
 	close(coordinadorSocket);
-	close(planificadorSocket);
+//	close(planificadorSocket);
 	return 0;
 
 	return 0;
