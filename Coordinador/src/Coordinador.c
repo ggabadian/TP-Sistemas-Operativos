@@ -28,17 +28,16 @@ int main(void) {
 	puts("Esperando cliente.");
 
 	while(1){
-		int status = 0;
 		int identificador;
 
 		int socketCliente = acceptSocket(listeningSocket);
 
-		status= recv(socketCliente, &identificador, 4, 0);
-		if (status != 0) {
-			printf("Conectado a %s.\n", identificar(identificador));
-		} else {
+		identificador = recibirHead(socketCliente);
+		if (identificador == ERROR_HEAD) {
 			puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
 			//(Pendiente) log error
+		} else {
+			printf("Conectado a %s.\n", identificar(identificador));
 		}
 
 		crearThread(identificador, socketCliente);
@@ -99,7 +98,10 @@ void crearThread(int id, int socket){
 
 void threadPlanificador(void* estructura){
 	struct stPlanificador* ePlanificador = (struct stPlanificador*) estructura;
-
+// 	while(1){
+//		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
+//		hacerAlgo(headPlanificador);
+//	}
 	recibirMensaje(ePlanificador->socketPlanificador);
 
 	free(ePlanificador);
@@ -107,6 +109,11 @@ void threadPlanificador(void* estructura){
 
 void threadESI(void* estructura){
 	struct stESI* eESI = (struct stESI*) estructura;
+
+// 	while(1){
+//		int headESI = recibirHead(eESI->socketESI);
+//		hacerAlgo(headESI);
+//	}
 
 	recibirMensaje(eESI->socketESI);
 
@@ -117,6 +124,11 @@ void threadInstancia(void* estructura){
 	struct stInstancia* eInstancia = (struct stInstancia*) estructura;
 
 	sendInitInstancia(eInstancia->socketInstancia, eInstancia->cantidadEntradas, eInstancia->sizeofEntrada);
+
+// 	while(1){
+//		int headInstancia = recibirHead(eInstancia->socketInstancia);
+//		hacerAlgo(headInstancia);
+//	}
 
 	recibirMensaje(eInstancia->socketInstancia);
 
@@ -143,7 +155,7 @@ void sendInitInstancia(int socket, int cantEntradas, int sizeEntrada){
 	paquete.sizeofEntrada = sizeEntrada;
 
 	// Envia el HEAD para que la instancia sepa lo que va a recibir
-	send(socket, &initDatosInstancia, 4, 0); // Por PROTOCOLO;
+	enviarHead(socket, initDatosInstancia);
 
 	//Envia el paquete
 	send(socket, (void*) &paquete, sizeof(paquete), 0);

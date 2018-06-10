@@ -46,6 +46,8 @@
 	int INSTANCIA = 400;
 //	otraCosaDeLaInstancia = 401,
 
+	int ERROR_HEAD = 500;
+
 // -----------------------
 
 
@@ -69,3 +71,17 @@ char* identificar(int id) {
 	}
 }
 
+// Antes de recibir un mensaje se debe recibir el HEAD
+int recibirHead(int socket){
+	int head = 0;
+	if ((recv(socket, &head, 4, 0)) < 0){
+		return ERROR_HEAD;
+	} else {
+		return head;
+	}
+}
+
+// Antes de enviar un mensaje se debe enviar el HEAD
+void enviarHead(int socket, int head){
+	send(socket, &head, 4, 0);
+}
