@@ -15,16 +15,16 @@ clean:
 
 coordinador:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) Coordinador/src/Coordinador.h Coordinador/src/Coordinador.c $(LIBS) -o $(BIN_PATH)/Coordinador
+	$(COMPILER) -g -Wall Coordinador/src/Coordinador.h Coordinador/src/Coordinador.c $(LIBS) -o $(BIN_PATH)/Coordinador
 
 planificador:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) Planificador/src/Planificador.h Planificador/src/Planificador.c Planificador/src/configPlanificador.c $(LIBS) -o $(BIN_PATH)/Planificador
+	$(COMPILER) -g -Wall Planificador/src/Planificador.h Planificador/src/Planificador.c Planificador/src/configPlanificador.c $(LIBS) -o $(BIN_PATH)/Planificador
 
 instancia:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) Instancia/src/Instancia.h Instancia/src/Instancia.c Instancia/src/configInstancia.c $(LIBS) -o $(BIN_PATH)/Instancia
+	$(COMPILER) -g -Wall Instancia/src/Instancia.h Instancia/src/Instancia.c Instancia/src/configInstancia.c $(LIBS) -o $(BIN_PATH)/Instancia
 
 esi:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(LIBS)-lparsi -o $(BIN_PATH)/ESI
+	$(COMPILER) -g -Wall ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(LIBS)-lparsi -o $(BIN_PATH)/ESI
