@@ -2,16 +2,27 @@
 
 // Los mensajes tienen la estructura: [HEAD:DATO]
 
-// HEAD son los primeros bytes que recibe una entidad
-// POR CONVENCION, los HEAD tienen la estructura ABCD donde
-// 		A (1 a 4)		-> 1 es para mensajes que espera el COORDINADOR
-// 						-> 2 para el PLANIFICADOR
-// 						-> 3 para el ESI
-// 						-> 4 para la INSTANCIA
-//     BCD (000 a 999)	-> Cada uno elige que valor darle
+// HEAD son los primeros 4 bytes(por ser int) que recibe una entidad
+// POR CONVENCION, los HEAD tienen la estructura ABC, donde:
 
-// DATO es el mensaje posta y es lo necesario para completar la accion elegida
-// segun el HEAD
+// "A" va desde 1 hasta 4
+// Los mensajes que empiezan con:
+// A = 1	-> son del COORDINADOR
+// A = 2	-> son del PLANIFICADOR
+// A = 3	-> son del ESI
+// A = 4	-> son de la INSTANCIA
+
+// "BC" va desde 00 hasta 99
+// BC = 00		-> Se usa para HANDSHAKE (100, 200, 300 y 400)
+// BC (01 a 99)	-> Libres
+
+// ACLARACIONES
+// El COORDINADOR envia mensajes que empiezan con 100 y pico (ejemplo: 112)
+// El PLANIFICADOR envia mensajes que empiezan con 200 y pico (ejemplo: 205)
+// Y asi con todos
+
+// DATO es lo necesario para completar la accion elegida segun el HEAD.
+// En algunos casos podria no existir el DATO (Ejemplo: HANDSHAKE)
 
 // Puerto de escucha del Coordinador: 5000
 // Puerto de escucha del Planificador: 5001
@@ -20,14 +31,27 @@
 
 // HEAD sirve para elegir la accion a realizar
 // y para saber cuantos bytes tiene que recibir de DATO
-enum Head {
-	initDataInstancia = 4000,
-	ejemploCoordinador = 1001,
-	otroEjemploESI = 3020,
-};
 
-// Para HANDSHAKE
-char* identificar(char id) {
+// -------- HEADs --------
+
+	int COORDINADOR = 100;
+//	otraCosaDelCoordinador = 101,
+
+	int PLANIFICADOR = 200;
+//	otraCosaDelPlanificador = 201,
+
+	int ESI = 300;
+//	otraCosaDelESI = 301,
+
+	int INSTANCIA = 400;
+//	otraCosaDeLaInstancia = 401,
+
+// -----------------------
+
+
+// Esto solamente es para el mensaje inicial en HANDSHAKE
+// Ejemplo: "Conectado a Coordinador"
+char* identificar(int id) {
 	if (id==COORDINADOR){
 		return "Coordinador";
 	}

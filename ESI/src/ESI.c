@@ -23,7 +23,7 @@ int main(void) {
 
 	int planificadorSocket = connectSocket(IP_PLANIFICADOR, PUERTO_PLANIFICADOR);
 	printf("Conectado a Planificador. \n");
-	send(planificadorSocket, &ESI, 1, 0); // Le avisa que es un ESI
+	send(planificadorSocket, &ESI, 4, 0); // Le avisa que es un ESI
 	status = recv(planificadorSocket, &id, sizeof(id), 0); // Recibe el id asignado por el Planificador
 	if (status != 0) {
 		printf("Este es el ESI %d.\n", id);
@@ -33,7 +33,7 @@ int main(void) {
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
-	send(coordinadorSocket, &ESI, 1, 0); // Le avisa que es un ESI
+	send(coordinadorSocket, &ESI, 4, 0); // Le avisa que es un ESI
 
 	int enviar = 1;
 	char message[PACKAGESIZE];

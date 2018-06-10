@@ -11,11 +11,11 @@ int main(void) {
 	puts("Esperando cliente.");
 
 	int status = 0;
-	char identificador; // Por PROTOCOLO
+	int identificador; // Por PROTOCOLO
 
 	int socketCliente = acceptSocket(listeningSocket);
 
-	status= recv(socketCliente, &identificador, 1, 0);
+	status= recv(socketCliente, &identificador, 4, 0);
 	if (status != 0) {
 		printf("Conectado a %s.\n", identificar(identificador));
 	} else {

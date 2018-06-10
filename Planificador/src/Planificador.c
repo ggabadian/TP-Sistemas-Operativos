@@ -89,18 +89,18 @@ int main() {
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
-	send(coordinadorSocket, &PLANIFICADOR, 1, 0); // Le avisa que es el planificador
+	send(coordinadorSocket, &PLANIFICADOR, 4, 0); // Le avisa que es el planificador
 
 	listen(listeningSocket, BACKLOG);
 
 	int status = 0;
-	char identificador; // Por PROTOCOLO
+	int identificador;
 
 	int idESI = 0; // Cantidad de ESIs conectados
 
 	int socketCliente = acceptSocket(listeningSocket);
 
-	status= recv(socketCliente, &identificador, 1, 0);
+	status= recv(socketCliente, &identificador, 4, 0);
 	if (status != 0) {
 		printf("Conectado a %s.\n", identificar(identificador));
 	} else {
