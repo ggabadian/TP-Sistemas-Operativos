@@ -2,8 +2,8 @@
 #define INSTANCIA_H_
 
 #include "configInstancia.h"
-#include "../../libs/socketClient.c"
-#include "../../libs/protocolo.c"
+#include "../../libs/socketClient.h"
+#include "../../libs/protocolo.h"
 
 
 int SOCKET_COORDINADOR;

@@ -1,9 +1,9 @@
 #ifndef COORDINADOR_H_
 #define COORDINADOR_H_
 
-#include "configCoordinador.c"
-#include "../../libs/socketServer.c"
-#include "../../libs/protocolo.c"
+#include "configCoordinador.h"
+#include "../../libs/socketServer.h"
+#include "../../libs/protocolo.h"
 #include <pthread.h>
 
 void crearThread(int, int);

@@ -29,8 +29,11 @@
 
 #include "protocolo.h"
 
+
 // HEAD sirve para elegir la accion a realizar
 // y para saber cuantos bytes tiene que recibir de DATO
+// se declaran en protocolo.h y se definen en protocolo.c
+
 
 // -------- HEADs --------
 
@@ -38,13 +41,13 @@
 	int initDatosInstancia = 101;
 
 	int PLANIFICADOR = 200;
-//	otraCosaDelPlanificador = 201,
+	//otraCosaDelPlanificador = 201,
 
 	int ESI = 300;
-//	otraCosaDelESI = 301,
+	//otraCosaDelESI = 301,
 
 	int INSTANCIA = 400;
-//	otraCosaDeLaInstancia = 401,
+	//otraCosaDeLaInstancia = 401,
 
 	int ERROR_HEAD = 500;
 

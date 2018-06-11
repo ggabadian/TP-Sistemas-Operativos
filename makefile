@@ -1,6 +1,8 @@
 COMPILER=gcc
 BIN_PATH=bin
-LIBS = -lcommons -pthread # Define referencias
+LIBS = libs/protocolo.c -lcommons -pthread # Define referencias
+CLIENTE = libs/socketClient.c
+SERVIDOR = libs/socketServer.c
 
 all: clean coordinador planificador instancia esi
 
@@ -15,16 +17,16 @@ clean:
 
 coordinador:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) -g -Wall Coordinador/src/Coordinador.h Coordinador/src/Coordinador.c $(LIBS) -o $(BIN_PATH)/Coordinador
+	$(COMPILER) -g -Wall Coordinador/src/Coordinador.h Coordinador/src/Coordinador.c Coordinador/src/configCoordinador.c $(SERVIDOR) $(LIBS) -o $(BIN_PATH)/Coordinador
 
 planificador:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) -g -Wall Planificador/src/Planificador.h Planificador/src/Planificador.c Planificador/src/configPlanificador.c $(LIBS) -o $(BIN_PATH)/Planificador
+	$(COMPILER) -g -Wall Planificador/src/Planificador.h Planificador/src/Planificador.c Planificador/src/configPlanificador.c $(SERVIDOR) $(CLIENTE) $(LIBS) -o $(BIN_PATH)/Planificador
 
 instancia:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) -g -Wall Instancia/src/Instancia.h Instancia/src/Instancia.c Instancia/src/configInstancia.c $(LIBS) -o $(BIN_PATH)/Instancia
+	$(COMPILER) -g -Wall Instancia/src/Instancia.h Instancia/src/Instancia.c Instancia/src/configInstancia.c $(CLIENTE) $(LIBS) -o $(BIN_PATH)/Instancia
 
 esi:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) -g -Wall ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(LIBS)-lparsi -o $(BIN_PATH)/ESI
+	$(COMPILER) -g -Wall ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(CLIENTE) $(LIBS)-lparsi -o $(BIN_PATH)/ESI

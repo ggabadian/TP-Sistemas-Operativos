@@ -2,8 +2,11 @@
 #define ESI_H_
 
 #include "configESI.h"
-#include "../../libs/socketClient.c"
-#include "../../libs/protocolo.c"
+#include "../../libs/socketClient.h"
+#include "../../libs/protocolo.h"
+
+int conectarAlPlanificador();
+int conectarAlCoordinador();
 
 
 #define PACKAGESIZE 1024

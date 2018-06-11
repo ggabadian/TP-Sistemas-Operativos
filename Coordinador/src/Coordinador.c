@@ -1,5 +1,4 @@
 #include "Coordinador.h"
-#include "configCoordinador.h"
 
 struct stPlanificador {
 	int socketPlanificador;

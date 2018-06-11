@@ -4,9 +4,9 @@
 
 
 #include "configPlanificador.h"
-#include "../../libs/socketServer.c"
-#include "../../libs/socketClient.c"
-#include "../../libs/protocolo.c"
+#include "../../libs/socketServer.h"
+#include "../../libs/socketClient.h"
+#include "../../libs/protocolo.h"
 
 void consola();
 
