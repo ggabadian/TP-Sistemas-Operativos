@@ -1,21 +1,5 @@
 #include "Coordinador.h"
 
-struct stPlanificador {
-	int socketPlanificador;
-//	otras cosas
-};
-
-struct stESI {
-	int socketESI;
-//	otras cosas
-};
-
-struct stInstancia {
-	int socketInstancia;
-	int cantidadEntradas;
-	int sizeofEntrada;
-};
-
 int main(void) {
 	puts("Iniciando coordinador...");
 	cargarConfig();
@@ -47,16 +31,14 @@ int main(void) {
 }
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
-//(Pendiente) BUG - Warning en status
-//(Pendiente) BUG - Si se cierra una entidad (que estaba conectada al Coordinador),
-//					el Coordinador se rompe
+//(Pendiente) BUG - Valgrind dice que hay problemas al enviar estructuras con send()
 
 void crearThread(int id, int socket){
 	pthread_t thread;
 
 	if (id == PLANIFICADOR){
 		int statusPlanificador = 1;
-		struct stPlanificador estPlanificador;
+		stPlanificador estPlanificador;
 		estPlanificador.socketPlanificador = socket;
 
 		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador, (void*) &estPlanificador);
@@ -67,7 +49,7 @@ void crearThread(int id, int socket){
 	}
 	else if (id == ESI){
 		int statusESI = 1;
-		struct stESI estESI;
+		stESI estESI;
 		estESI.socketESI = socket;
 
 		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) &estESI);
@@ -78,7 +60,7 @@ void crearThread(int id, int socket){
 	}
 	else if (id == INSTANCIA){
 		int statusInstancia = 1;
-		struct stInstancia estInstancia;
+		stInstancia estInstancia;
 		estInstancia.socketInstancia = socket;
 		estInstancia.cantidadEntradas = 25;
 		estInstancia.sizeofEntrada = 10;
@@ -95,43 +77,47 @@ void crearThread(int id, int socket){
 	}
 }
 
-void threadPlanificador(void* estructura){
-	struct stPlanificador* ePlanificador = (struct stPlanificador*) estructura;
-// 	while(1){
+void* threadPlanificador(void* estructura){
+	stPlanificador* ePlanificador = (stPlanificador*) estructura;
+
+ 	while(1){
 //		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
 //		hacerAlgo(headPlanificador);
-//	}
-	recibirMensaje(ePlanificador->socketPlanificador);
+	}
+//	recibirMensaje(ePlanificador->socketPlanificador);
 
 	free(ePlanificador);
+	return NULL;
 }
 
-void threadESI(void* estructura){
-	struct stESI* eESI = (struct stESI*) estructura;
+void* threadESI(void* estructura){
+	stESI* eESI = (stESI*) estructura;
 
-// 	while(1){
+ 	while(1){
 //		int headESI = recibirHead(eESI->socketESI);
 //		hacerAlgo(headESI);
-//	}
+	}
 
-	recibirMensaje(eESI->socketESI);
+//	recibirMensaje(eESI->socketESI);
 
 	free(eESI);
+	return NULL;
 }
 
-void threadInstancia(void* estructura){
-	struct stInstancia* eInstancia = (struct stInstancia*) estructura;
+void* threadInstancia(void* estructura){
+	stInstancia* eInstancia = (stInstancia*) estructura;
 
 	sendInitInstancia(eInstancia->socketInstancia, eInstancia->cantidadEntradas, eInstancia->sizeofEntrada);
 
-// 	while(1){
+ 	while(1){
 //		int headInstancia = recibirHead(eInstancia->socketInstancia);
 //		hacerAlgo(headInstancia);
-//	}
+	}
 
-	recibirMensaje(eInstancia->socketInstancia);
+//	recibirMensaje(eInstancia->socketInstancia);
 
 	free(eInstancia);
+	return NULL;
 }
 
 void recibirMensaje(int socket){
