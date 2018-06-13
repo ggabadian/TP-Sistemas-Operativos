@@ -31,25 +31,25 @@
 
 
 // HEAD sirve para elegir la accion a realizar
-// y para saber cuantos bytes tiene que recibir de DATO
 // se declaran en protocolo.h y se definen en protocolo.c
 
+// Se usa el tipo uint32_t para que sean 4 bytes independientemente de la arquitectura
 
 // -------- HEADs --------
 
-	int COORDINADOR = 100;
-	int initDatosInstancia = 101;
+	uint32_t COORDINADOR = 100;
+	uint32_t initDatosInstancia = 101;
 
-	int PLANIFICADOR = 200;
+	uint32_t PLANIFICADOR = 200;
 	//otraCosaDelPlanificador = 201,
 
-	int ESI = 300;
+	uint32_t ESI = 300;
 	//otraCosaDelESI = 301,
 
-	int INSTANCIA = 400;
+	uint32_t INSTANCIA = 400;
 	//otraCosaDeLaInstancia = 401,
 
-	int ERROR_HEAD = 500;
+	uint32_t ERROR_HEAD = 500;
 
 // -----------------------
 

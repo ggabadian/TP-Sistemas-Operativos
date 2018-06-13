@@ -107,7 +107,10 @@ void* threadESI(void* estructura){
 void* threadInstancia(void* estructura){
 	stInstancia* eInstancia = (stInstancia*) estructura;
 
-	sendInitInstancia(eInstancia->socketInstancia, eInstancia->cantidadEntradas, eInstancia->sizeofEntrada);
+	uint32_t socket = eInstancia->socketInstancia;
+
+
+	sendInitInstancia(socket, eInstancia->cantidadEntradas, eInstancia->sizeofEntrada);
 
  	while(1){
 //		int headInstancia = recibirHead(eInstancia->socketInstancia);
@@ -131,10 +134,8 @@ void recibirMensaje(int socket){
 }
 
 void sendInitInstancia(int socket, int cantEntradas, int sizeEntrada){
-	struct estMensaje {
-		int cantidadEntradas;
-		int sizeofEntrada;
-	} paquete;
+
+	t_InitInstancia paquete;
 
 	paquete.cantidadEntradas = cantEntradas;
 	paquete.sizeofEntrada = sizeEntrada;
@@ -142,8 +143,14 @@ void sendInitInstancia(int socket, int cantEntradas, int sizeEntrada){
 	// Envia el HEAD para que la instancia sepa lo que va a recibir
 	enviarHead(socket, initDatosInstancia);
 
+//(PENDIENTE) Serializacion de paquete
+
 	//Envia el paquete
 	send(socket, (void*) &paquete, sizeof(paquete), 0);
 
 	puts("Configuración inicial enviada a Instancia.");
+}
+
+void freePackage(char **package){
+	free(*package);
 }
