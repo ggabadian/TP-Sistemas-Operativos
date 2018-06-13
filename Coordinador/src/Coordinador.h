@@ -13,7 +13,7 @@ typedef struct {
 } stPlanificador;
 
 typedef struct {
-	uint32_t socketESI;
+	uint32_t socketESI __attribute__((packed));
 //	otras cosas
 } stESI;
 

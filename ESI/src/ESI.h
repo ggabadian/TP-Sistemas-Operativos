@@ -4,6 +4,7 @@
 #include "configESI.h"
 #include "../../libs/socketClient.h"
 #include "../../libs/protocolo.h"
+#include <parsi/parser.h>
 
 int conectarAlPlanificador();
 int conectarAlCoordinador();
