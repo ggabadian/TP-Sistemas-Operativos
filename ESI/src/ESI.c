@@ -34,6 +34,8 @@ int main(int argc, char** argv) {
 
 	// abrir archivo
 
+	enviarHead(coordinadorSocket, ACT_GET);
+
 	FILE * fp;
 	char * line = NULL;
 	size_t len = 0;
@@ -50,6 +52,7 @@ int main(int argc, char** argv) {
 	read = getline(&line, &len, fp);
 	parsed = parse(line);
 
+	//send(coordinadorSocket, &ACT_GET, sizeof(ACT_GET),0);
 	while (read != -1) {
 		// 5. esperar orden de ejecucion
 		printf("Presione ENTER para finalizar el ESI\n");
@@ -58,7 +61,35 @@ int main(int argc, char** argv) {
 			enter = getchar();
 		}
 
-		send(coordinadorSocket, &parsed, sizeof(parsed),0);
+		if (parsed.valido) {
+			switch (parsed.keyword) {
+			case GET:
+				printf("GET\tclave: <%s>\n", parsed.argumentos.GET.clave);
+				//empaquetar
+				//enviar paquete de GET al coordinador
+				break;
+			case SET:
+				printf("SET\tclave: <%s>\tvalor: <%s>\n",
+						parsed.argumentos.SET.clave,
+						parsed.argumentos.SET.valor);
+				//empaquetar
+				//enviar paquete de SET al coordinador
+				break;
+			case STORE:
+				printf("STORE\tclave: <%s>\n", parsed.argumentos.STORE.clave);
+				break;
+				//empaquetar
+				//enviar paquete de STORE al coordinador
+			default:
+				fprintf(stderr, "No pude interpretar \n");
+				exit(EXIT_FAILURE);
+			}
+
+			destruir_operacion(parsed);
+		} else {
+			fprintf(stderr, "La linea no es valida\n");
+			exit(EXIT_FAILURE);
+		}
 
 		// 7. enviar al coordinador la opercion
 

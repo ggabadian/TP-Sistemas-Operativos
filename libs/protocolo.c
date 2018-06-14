@@ -5,12 +5,13 @@
 // HEAD son los primeros 4 bytes(por ser int) que recibe una entidad
 // POR CONVENCION, los HEAD tienen la estructura ABC, donde:
 
-// "A" va desde 1 hasta 4
+// "A" va desde 1 hasta 9
 // Los mensajes que empiezan con:
 // A = 1	-> son del COORDINADOR
 // A = 2	-> son del PLANIFICADOR
 // A = 3	-> son del ESI
 // A = 4	-> son de la INSTANCIA
+// A = 9	-> son mensajes compartidos
 
 // "BC" va desde 00 hasta 99
 // BC = 00		-> Se usa para HANDSHAKE (100, 200, 300 y 400)
@@ -41,18 +42,21 @@
 	uint32_t initDatosInstancia = 101;
 
 	uint32_t PLANIFICADOR = 200;
-	//otraCosaDelPlanificador = 201,
+	//uint32_t otraCosaDelPlanificador = 201;
 
 	uint32_t ESI = 300;
-	//otraCosaDelESI = 301,
+	//uint32_t otraCosaDelESI = 301;
 
 	uint32_t INSTANCIA = 400;
-	//otraCosaDeLaInstancia = 401,
+	//uint32_t otraCosaDeLaInstancia = 401;
 
-	uint32_t ERROR_HEAD = 500;
+	// MENSAJES COMPARTIDOS
+	uint32_t ERROR_HEAD = 900;
+	uint32_t ACT_GET = 901;
+	uint32_t ACT_SET = 902;
+	uint32_t ACT_STORE = 903;
 
 // -----------------------
-
 
 // Esto solamente es para el mensaje inicial en HANDSHAKE
 // Ejemplo: "Conectado a Coordinador"

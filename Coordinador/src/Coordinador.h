@@ -7,10 +7,6 @@
 #include <pthread.h>
 #include <stdint.h>
 
-int socketPlanificador;
-int socketESI;
-int socketInstancia;
-
 typedef struct {
 	uint32_t cantidadEntradas;
 	uint32_t sizeofEntrada;

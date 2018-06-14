@@ -1,5 +1,11 @@
 #include "Coordinador.h"
-#include <parsi/parser.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(void) {
 	puts("Iniciando coordinador...");
@@ -18,8 +24,7 @@ int main(void) {
 
 		identificador = recibirHead(socketCliente);
 		if (identificador == ERROR_HEAD) {
-			puts(
-					"Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
+			puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
 			//(Pendiente) log error
 		} else {
 			printf("Conectado a %s.\n", identificar(identificador));
@@ -40,20 +45,17 @@ void crearThread(int id, int socket) {
 
 	if (id == PLANIFICADOR) {
 		int statusPlanificador = 1;
-		int socketPlanificador = socket;
 
 		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador,
-				(void*) &socketPlanificador);
+				(void*) &socket);
 		if (statusPlanificador) {
 			puts("Error en la creación de thread para Planificador");
 			//(Pendiente) log error
 		}
 	} else if (id == ESI) {
 		int statusESI = 1;
-		int *socketESI = malloc(sizeof(int)); // (PENDIENTE) Hacer free
-		socketESI = &socket;
 
-		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) socketESI);
+		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) &socket);
 
 		if (statusESI) {
 			puts("Error en la creación de thread para ESI");
@@ -61,10 +63,9 @@ void crearThread(int id, int socket) {
 		}
 	} else if (id == INSTANCIA) {
 		int statusInstancia = 1;
-		int socketInstancia = socket;
 
 		statusInstancia = pthread_create(&thread, NULL, &threadInstancia,
-				(void*) &socketInstancia);
+				(void*) &socket);
 		if (statusInstancia) {
 			puts("Error en la creación de thread para Instancia");
 			//(Pendiente) log error
@@ -97,39 +98,9 @@ void* threadESI(void* socket) {
 //		int headESI = recibirHead(eESI->socketESI);
 //		hacerAlgo(headESI);
 
-		t_esi_operacion parsed;
 
-		recv(*socketESI,&parsed,sizeof(t_esi_operacion),0);
-
-		if (parsed.valido) {
-			switch (parsed.keyword) {
-			case GET:
-				printf("GET\tclave: <%s>\n", parsed.argumentos.GET.clave);
-				break;
-			case SET:
-				printf("SET\tclave: <%s>\tvalor: <%s>\n",
-						parsed.argumentos.SET.clave,
-						parsed.argumentos.SET.valor);
-				break;
-			case STORE:
-				printf("STORE\tclave: <%s>\n", parsed.argumentos.STORE.clave);
-				break;
-			default:
-				fprintf(stderr, "No pude interpretar \n");
-				exit(EXIT_FAILURE);
-			}
-
-			destruir_operacion(parsed);
-		} else {
-			fprintf(stderr, "La linea no es valida\n");
-			exit(EXIT_FAILURE);
-		}
 	}
 
-//	recibirMensaje(eESI->socketESI);
-
-	//close(*socketESI);
-	//free(socketESI);
 	return NULL;
 }
 
@@ -154,7 +125,7 @@ void* threadInstancia(void* socket) {
 void recibirMensaje(int socket) {
 	char *package = malloc(1024);
 	while (1) {
-		recv(socket, (void*) package, 1024, 0);
+		recv(socket, (void*) package, 4, 0);
 		printf("%s", package);
 	}
 	close(socket);

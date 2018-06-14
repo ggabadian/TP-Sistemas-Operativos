@@ -5,8 +5,6 @@
 #include <sys/socket.h>
 #include <stdint.h>
 
-#define MAX_HEAD_SIZE 4 // Por ser int
-
 char* identificar(int);
 int recibirHead(int);
 void enviarHead(int, int);
@@ -21,21 +19,25 @@ void enviarHead(int, int);
 	extern uint32_t initDatosInstancia;
 
 	extern uint32_t PLANIFICADOR;
-//	otraCosaDelPlanificador = 201,
+//	extern uint32_t otraCosaDelPlanificador;
 
 	extern uint32_t ESI;
-//	otraCosaDelESI = 301,
+//	extern uint32_t otraCosaDelESI;
 
 	extern uint32_t INSTANCIA;
-//	otraCosaDeLaInstancia = 401,
+//	extern uint32_t otraCosaDeLaInstancia;
 
+	// MENSAJES COMPARTIDOS
 	extern uint32_t ERROR_HEAD;
+	extern uint32_t ACT_GET;
+	extern uint32_t ACT_SET;
+	extern uint32_t ACT_STORE;
 
 // -----------------------
 
 // Estructura de paquetes en mensajes principales
 typedef struct _t_Package {
-	char head[MAX_HEAD_SIZE];
+	uint32_t head;
 	char* message;
 	uint32_t message_long;
 } t_Package;
