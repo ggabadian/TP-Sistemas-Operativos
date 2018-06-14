@@ -7,26 +7,14 @@
 #include <pthread.h>
 #include <stdint.h>
 
-typedef struct {
-	uint32_t socketPlanificador;
-//	otras cosas
-} stPlanificador;
-
-typedef struct {
-	uint32_t socketESI __attribute__((packed));
-//	otras cosas
-} stESI;
-
-typedef struct {
-	uint32_t socketInstancia;
-	uint32_t cantidadEntradas;
-	uint32_t sizeofEntrada;
-} stInstancia;
+int socketPlanificador;
+int socketESI;
+int socketInstancia;
 
 typedef struct {
 	uint32_t cantidadEntradas;
 	uint32_t sizeofEntrada;
-} t_InitInstancia;
+} t_InitInstancia; // __attribute__((packed));
 
 void crearThread(int, int);
 void* threadPlanificador(void*);

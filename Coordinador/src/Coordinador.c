@@ -40,34 +40,31 @@ void crearThread(int id, int socket) {
 
 	if (id == PLANIFICADOR) {
 		int statusPlanificador = 1;
-		stPlanificador estPlanificador;
-		estPlanificador.socketPlanificador = socket;
+		int socketPlanificador = socket;
 
 		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador,
-				(void*) &estPlanificador);
+				(void*) &socketPlanificador);
 		if (statusPlanificador) {
 			puts("Error en la creación de thread para Planificador");
 			//(Pendiente) log error
 		}
 	} else if (id == ESI) {
 		int statusESI = 1;
-		//stESI estESI;
-		int socketESI = socket;
+		int *socketESI = malloc(sizeof(int)); // (PENDIENTE) Hacer free
+		socketESI = &socket;
 
-		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) &socketESI);
+		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) socketESI);
+
 		if (statusESI) {
 			puts("Error en la creación de thread para ESI");
 			//(Pendiente) log error
 		}
 	} else if (id == INSTANCIA) {
 		int statusInstancia = 1;
-		stInstancia estInstancia;
-		estInstancia.socketInstancia = socket;
-		estInstancia.cantidadEntradas = 25;
-		estInstancia.sizeofEntrada = 10;
+		int socketInstancia = socket;
 
 		statusInstancia = pthread_create(&thread, NULL, &threadInstancia,
-				(void*) &estInstancia);
+				(void*) &socketInstancia);
 		if (statusInstancia) {
 			puts("Error en la creación de thread para Instancia");
 			//(Pendiente) log error
@@ -78,8 +75,8 @@ void crearThread(int id, int socket) {
 	}
 }
 
-void* threadPlanificador(void* estructura) {
-	stPlanificador* ePlanificador = (stPlanificador*) estructura;
+void* threadPlanificador(void* socket) {
+	int* socketPlanificador = (int*) socket;
 
 	while (1) {
 //		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
@@ -87,12 +84,14 @@ void* threadPlanificador(void* estructura) {
 	}
 //	recibirMensaje(ePlanificador->socketPlanificador);
 
-	free(ePlanificador);
+	close(*socketPlanificador);
+	free(socketPlanificador);
+
 	return NULL;
 }
 
-void* threadESI(void* estructura) {
-	stESI* eESI = (stESI*) estructura;
+void* threadESI(void* socket) {
+	int* socketESI = (int*) socket;
 
 	while (1) {
 //		int headESI = recibirHead(eESI->socketESI);
@@ -100,7 +99,8 @@ void* threadESI(void* estructura) {
 
 		t_esi_operacion parsed;
 
-		recv(eESI->socketESI,&parsed,sizeof(parsed),0);
+		recv(*socketESI,&parsed,sizeof(t_esi_operacion),0);
+
 		if (parsed.valido) {
 			switch (parsed.keyword) {
 			case GET:
@@ -128,17 +128,16 @@ void* threadESI(void* estructura) {
 
 //	recibirMensaje(eESI->socketESI);
 
-	free(eESI);
+	//close(*socketESI);
+	//free(socketESI);
 	return NULL;
 }
 
-void* threadInstancia(void* estructura) {
-	stInstancia* eInstancia = (stInstancia*) estructura;
+void* threadInstancia(void* socket) {
+	int* socketInstancia = (int*) socket;
 
-	uint32_t socket = eInstancia->socketInstancia;
-
-	sendInitInstancia(socket, eInstancia->cantidadEntradas,
-			eInstancia->sizeofEntrada);
+	sendInitInstancia(*socketInstancia, CANTIDAD_ENTRADAS,
+			BYTES_ENTRADA);
 
 	while (1) {
 //		int headInstancia = recibirHead(eInstancia->socketInstancia);
@@ -147,7 +146,8 @@ void* threadInstancia(void* estructura) {
 
 //	recibirMensaje(eInstancia->socketInstancia);
 
-	free(eInstancia);
+	close(*socketInstancia);
+	free(socketInstancia);
 	return NULL;
 }
 
