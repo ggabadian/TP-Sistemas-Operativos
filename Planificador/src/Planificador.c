@@ -77,6 +77,11 @@ void consola() {
 int main() {
 	puts("Iniciando planificador...");
 	cargarConfigPlanificador();
+
+	t_head header;
+	header.context = PLANIFICADOR;
+	header.mSize = 0;
+
 //	printf("PUERTO= %s\n", PUERTO);
 //	printf("ALGORITMO= %s\n", ALGORITMO);
 //	printf("ALFA= %d\n", ALFA);
@@ -89,25 +94,25 @@ int main() {
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
-	send(coordinadorSocket, &PLANIFICADOR, 4, 0); // Le avisa que es el planificador
+	sendHead(coordinadorSocket, header); // Le avisa que es el planificador
 
 	listen(listeningSocket, BACKLOG);
 
-	int status = 0;
-	int identificador;
+	t_head identificador;
+	int status = 1;
 
 	int idESI = 0; // Cantidad de ESIs conectados
 
 	int socketCliente = acceptSocket(listeningSocket);
 
-	status= recv(socketCliente, &identificador, 4, 0);
-	if (status != 0) {
-		printf("Conectado a %s.\n", identificar(identificador));
-	} else {
+	identificador = recvHead(socketCliente);
+	if (identificador.context == ERROR_HEAD) {
 		puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
+	} else {
+		printf("Conectado a %s.\n", identificar(identificador.context));
 	}
 
-	if (identificador==ESI) { // Si es un ESI, le asigna un id
+	if (identificador.context==ESI) { // Si es un ESI, le asigna un id
 		idESI ++;
 		send(socketCliente, &idESI, sizeof(idESI), 0);
 	}

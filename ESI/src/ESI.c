@@ -6,6 +6,9 @@ int main(int argc, char** argv) {
 	puts("Iniciando ESI...");
 	cargarConfig();
 
+	t_head header;
+	t_set paqueteSet;
+
 	/*
 	 1. Conectarse al planificador.
 	 2. Handshake planificador (recibir ID)
@@ -34,7 +37,7 @@ int main(int argc, char** argv) {
 
 	// abrir archivo
 
-	enviarHead(coordinadorSocket, ACT_GET);
+	//enviarHead(coordinadorSocket, ACT_GET);
 
 	FILE * fp;
 	char * line = NULL;
@@ -55,7 +58,7 @@ int main(int argc, char** argv) {
 	//send(coordinadorSocket, &ACT_GET, sizeof(ACT_GET),0);
 	while (read != -1) {
 		// 5. esperar orden de ejecucion
-		printf("Presione ENTER para finalizar el ESI\n");
+		printf("Presione ENTER para parsear la próxima línea\n");
 		char enter = 0;
 		while (enter != '\r' && enter != '\n') {
 			enter = getchar();
@@ -64,24 +67,32 @@ int main(int argc, char** argv) {
 		if (parsed.valido) {
 			switch (parsed.keyword) {
 			case GET:
-				printf("GET\tclave: <%s>\n", parsed.argumentos.GET.clave);
-				//empaquetar
-				//enviar paquete de GET al coordinador
+				header.context = ACT_GET;
+				header.mSize = sizeof(parsed.argumentos.GET.clave);
+				sendHead(coordinadorSocket, header);
+				send(coordinadorSocket, parsed.argumentos.GET.clave, sizeof(parsed.argumentos.GET.clave), 0);
 				break;
 			case SET:
-				printf("SET\tclave: <%s>\tvalor: <%s>\n",
-						parsed.argumentos.SET.clave,
-						parsed.argumentos.SET.valor);
-				//empaquetar
-				//enviar paquete de SET al coordinador
+				header.context = ACT_SET;
+				header.mSize = sizeof(paqueteSet);
+				sendHead(coordinadorSocket, header);
+
+				paqueteSet.sizeClave = sizeof(parsed.argumentos.SET.clave);
+				strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
+				paqueteSet.sizeValor = sizeof(parsed.argumentos.SET.valor);
+				strcpy(paqueteSet.valor, parsed.argumentos.SET.valor);
+
+				send(coordinadorSocket, &paqueteSet, sizeof(paqueteSet), 0);
 				break;
 			case STORE:
-				printf("STORE\tclave: <%s>\n", parsed.argumentos.STORE.clave);
+				header.context = ACT_STORE;
+				header.mSize = sizeof(parsed.argumentos.STORE.clave);
+				sendHead(coordinadorSocket, header);
+
+				send(coordinadorSocket, parsed.argumentos.STORE.clave, sizeof(parsed.argumentos.STORE.clave), 0);
 				break;
-				//empaquetar
-				//enviar paquete de STORE al coordinador
 			default:
-				fprintf(stderr, "No pude interpretar \n");
+				fprintf(stderr, "No se pudo interpretar \n");
 				exit(EXIT_FAILURE);
 			}
 
@@ -117,6 +128,10 @@ int main(int argc, char** argv) {
 }
 
 int conectarAlPlanificador() {
+	t_head header;
+	header.context = ESI;
+	header.mSize = 0;
+
 	int planificadorSocket = connectSocket(IP_PLANIFICADOR,
 			PUERTO_PLANIFICADOR);
 	if (planificadorSocket < 0) {
@@ -125,7 +140,7 @@ int conectarAlPlanificador() {
 	} else {
 		printf("Conectado a Planificador. \n");
 	}
-	send(planificadorSocket, &ESI, 4, 0); // Le avisa que es un ESI
+	sendHead(planificadorSocket, header); // Le avisa que es un ESI
 	int status = recv(planificadorSocket, &id, sizeof(id), 0); // Recibe el id asignado por el Planificador
 	if (status < 0) {
 		puts("ERROR: El planificador no pudo asignar un id.\n");
@@ -137,6 +152,10 @@ int conectarAlPlanificador() {
 }
 
 int conectarAlCoordinador() {
+	t_head header;
+	header.context = ESI;
+	header.mSize = 0;
+
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 
 	if (coordinadorSocket < 0) {
@@ -145,6 +164,7 @@ int conectarAlCoordinador() {
 	} else {
 		printf("Conectado a Coordinador. \n");
 	}
-	send(coordinadorSocket, &ESI, 4, 0); // Le avisa que es un ESI
+	sendHead(coordinadorSocket, header); // Le avisa que es un ESI
+	send(coordinadorSocket, &id, sizeof(int), 0); // Le envia su id
 	return coordinadorSocket;
 }

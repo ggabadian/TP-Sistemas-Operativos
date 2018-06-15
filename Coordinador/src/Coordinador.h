@@ -12,7 +12,7 @@ typedef struct {
 	uint32_t sizeofEntrada;
 } t_InitInstancia; // __attribute__((packed));
 
-void crearThread(int, int);
+void crearThread(e_context, int);
 void* threadPlanificador(void*);
 void* threadESI(void*);
 void* threadInstancia(void*);

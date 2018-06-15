@@ -1,13 +1,15 @@
 #include "Instancia.h"
 
 bool conectarCoordinador(){
+	t_head header;
+	header.context = INSTANCIA;
+	header.mSize = 0;
+
 	//conecta mediante un socket la instancia con el coordinador
 	puts("Conectando al coordinador");
 
 	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
-	if(send(SOCKET_COORDINADOR, &INSTANCIA, 4, 0) < 0){; // Le avisa que es una INSTANCIA
-		return false;
-	}
+	sendHead(SOCKET_COORDINADOR, header); // Le avisa que es una INSTANCIA
 
 	return true;
 }

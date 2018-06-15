@@ -1,94 +1,54 @@
 // PROTOCOLO DE COMUNICACION
 
-// Los mensajes tienen la estructura: [HEAD:DATO]
+// Los mensajes tienen la forma: [HEAD:DATO]
 
-// HEAD son los primeros 4 bytes(por ser int) que recibe una entidad
-// POR CONVENCION, los HEAD tienen la estructura ABC, donde:
-
-// "A" va desde 1 hasta 9
-// Los mensajes que empiezan con:
-// A = 1	-> son del COORDINADOR
-// A = 2	-> son del PLANIFICADOR
-// A = 3	-> son del ESI
-// A = 4	-> son de la INSTANCIA
-// A = 9	-> son mensajes compartidos
-
-// "BC" va desde 00 hasta 99
-// BC = 00		-> Se usa para HANDSHAKE (100, 200, 300 y 400)
-// BC (01 a 99)	-> Libres
-
-// ACLARACIONES
-// El COORDINADOR envia mensajes que empiezan con 100 y pico (ejemplo: 112)
-// El PLANIFICADOR envia mensajes que empiezan con 200 y pico (ejemplo: 205)
-// Y asi con todos
-
-// DATO es lo necesario para completar la accion elegida segun el HEAD.
-// En algunos casos podria no existir el DATO (Ejemplo: HANDSHAKE)
+// HEAD es el primer mensaje que se envia/recibe
+// POR CONVENCION, los HEAD son una estructura (t_head) compuesta por:
+// context -> Es de tipo enum (e_context) y se usa para determinar la accion que se va a realizar
+// mSize -> Es un entero que determina la cantidad de bytes de DATO que se deben leer
+//			en el proximo recv()
 
 // Puerto de escucha del Coordinador: 5000
 // Puerto de escucha del Planificador: 5001
 
+// Aclaracion: Donde aparezca "uint32_t", entender como "int"
+
 #include "protocolo.h"
-
-
-// HEAD sirve para elegir la accion a realizar
-// se declaran en protocolo.h y se definen en protocolo.c
-
-// Se usa el tipo uint32_t para que sean 4 bytes independientemente de la arquitectura
-
-// -------- HEADs --------
-
-	uint32_t COORDINADOR = 100;
-	uint32_t initDatosInstancia = 101;
-
-	uint32_t PLANIFICADOR = 200;
-	//uint32_t otraCosaDelPlanificador = 201;
-
-	uint32_t ESI = 300;
-	//uint32_t otraCosaDelESI = 301;
-
-	uint32_t INSTANCIA = 400;
-	//uint32_t otraCosaDeLaInstancia = 401;
-
-	// MENSAJES COMPARTIDOS
-	uint32_t ERROR_HEAD = 900;
-	uint32_t ACT_GET = 901;
-	uint32_t ACT_SET = 902;
-	uint32_t ACT_STORE = 903;
-
-// -----------------------
 
 // Esto solamente es para el mensaje inicial en HANDSHAKE
 // Ejemplo: "Conectado a Coordinador"
-char* identificar(int id) {
-	if (id==COORDINADOR){
-		return "Coordinador";
-	}
-	else if (id==PLANIFICADOR) {
-		return "Planificador";
-	}
-	else if (id==ESI) {
-		return "ESI";
-	}
-	else if (id==INSTANCIA) {
-		return "Instancia";
-	}
-	else {
-		return "Error";
+char* identificar(e_context id) {
+	switch(id){
+		case COORDINADOR:
+			return "Coordinador";
+			break;
+		case PLANIFICADOR:
+			return "Planificador";
+			break;
+		case ESI:
+			return "ESI";
+			break;
+		case INSTANCIA:
+			return "Instancia";
+			break;
+		default:
+			return "Error";
 	}
 }
 
 // Antes de recibir un mensaje se debe recibir el HEAD
-int recibirHead(int socket){
-	int head = 0;
-	if ((recv(socket, &head, 4, 0)) < 0){
-		return ERROR_HEAD;
+t_head recvHead(int socket){
+	t_head head;
+	if ((recv(socket, &head, sizeof(t_head), 0)) < 0){
+		head.context = ERROR_HEAD;
+		head.mSize = 0;
+		return head;
 	} else {
 		return head;
 	}
 }
 
 // Antes de enviar un mensaje se debe enviar el HEAD
-void enviarHead(int socket, int head){
-	send(socket, &head, 4, 0);
+void sendHead(int socket, t_head head){
+	send(socket, &head, sizeof(t_head), 0);
 }

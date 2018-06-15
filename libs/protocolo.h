@@ -5,41 +5,48 @@
 #include <sys/socket.h>
 #include <stdint.h>
 
-char* identificar(int);
-int recibirHead(int);
-void enviarHead(int, int);
+// -------- Contexto --------
+typedef enum {
+	COORDINADOR,
+	initDatosInstancia,
 
+	PLANIFICADOR,
+	//otraCosaDelPlanificador,
 
-// HEAD sirve para elegir la accion a realizar
-// se declaran en protocolo.h y se definen en protocolo.c
+	ESI,
+	//otraCosaDelESI,
 
-// -------- HEADs --------
-
-	extern uint32_t COORDINADOR;
-	extern uint32_t initDatosInstancia;
-
-	extern uint32_t PLANIFICADOR;
-//	extern uint32_t otraCosaDelPlanificador;
-
-	extern uint32_t ESI;
-//	extern uint32_t otraCosaDelESI;
-
-	extern uint32_t INSTANCIA;
-//	extern uint32_t otraCosaDeLaInstancia;
+	INSTANCIA,
+	//otraCosaDeLaInstancia,
 
 	// MENSAJES COMPARTIDOS
-	extern uint32_t ERROR_HEAD;
-	extern uint32_t ACT_GET;
-	extern uint32_t ACT_SET;
-	extern uint32_t ACT_STORE;
-
+	ERROR_HEAD,
+	ACT_GET,
+	ACT_SET,
+	ACT_STORE
+} e_context;
 // -----------------------
 
-// Estructura de paquetes en mensajes principales
-typedef struct _t_Package {
-	uint32_t head;
-	char* message;
-	uint32_t message_long;
-} t_Package;
+// -------- HEAD --------
+typedef struct {
+	e_context context; // Contexto
+	uint32_t mSize; // Cantidad de bytes del DATO a recibir
+} __attribute__((packed)) t_head;
+// -----------------------
+
+// ------------ ESTRUCTURAS COMPARTIDAS -------------
+
+typedef struct {
+	uint32_t sizeClave;
+	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
+	uint32_t sizeValor;
+	char valor[255]; // Limitamos los caracteres para usar serializacion estatica
+} __attribute__((packed)) t_set;
+
+// --------------------------------------------------
+
+char* identificar(e_context);
+t_head recvHead(int);
+void sendHead(int, t_head);
 
 #endif /* LIBS_PROTOCOLO_H_ */
