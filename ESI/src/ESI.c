@@ -7,7 +7,9 @@ int main(int argc, char** argv) {
 	cargarConfig();
 
 	t_head header;
+
 	t_set paqueteSet;
+	memset(&paqueteSet, 0, sizeof(t_set)); //Inicializa toda la estrucutra
 
 	/*
 	 1. Conectarse al planificador.
@@ -68,9 +70,9 @@ int main(int argc, char** argv) {
 			switch (parsed.keyword) {
 			case GET:
 				header.context = ACT_GET;
-				header.mSize = sizeof(parsed.argumentos.GET.clave);
+				header.mSize = strlen(parsed.argumentos.GET.clave) + 1; // +1 por el \0
 				sendHead(coordinadorSocket, header);
-				send(coordinadorSocket, parsed.argumentos.GET.clave, sizeof(parsed.argumentos.GET.clave), 0);
+				send(coordinadorSocket, parsed.argumentos.GET.clave, strlen(parsed.argumentos.GET.clave)+1, 0);
 				break;
 			case SET:
 				header.context = ACT_SET;
@@ -86,10 +88,10 @@ int main(int argc, char** argv) {
 				break;
 			case STORE:
 				header.context = ACT_STORE;
-				header.mSize = sizeof(parsed.argumentos.STORE.clave);
+				header.mSize = strlen(parsed.argumentos.STORE.clave) + 1;
 				sendHead(coordinadorSocket, header);
 
-				send(coordinadorSocket, parsed.argumentos.STORE.clave, sizeof(parsed.argumentos.STORE.clave), 0);
+				send(coordinadorSocket, parsed.argumentos.STORE.clave, strlen(parsed.argumentos.STORE.clave)+1, 0);
 				break;
 			default:
 				fprintf(stderr, "No se pudo interpretar \n");
