@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
 	size_t len = 0;
 	ssize_t read;
 	t_esi_operacion parsed;
+	int numline = 0;
 
 	fp = fopen(argv[1], "r");
 	if (fp == NULL) {
@@ -56,6 +57,7 @@ int main(int argc, char** argv) {
 	// 6.1 leer linea del script
 	read = getline(&line, &len, fp);
 	parsed = parse(line);
+	numline++;
 
 	//send(coordinadorSocket, &ACT_GET, sizeof(ACT_GET),0);
 	while (read != -1) {
@@ -77,13 +79,28 @@ int main(int argc, char** argv) {
 			case SET:
 				header.context = ACT_SET;
 				header.mSize = sizeof(paqueteSet);
-				sendHead(coordinadorSocket, header);
 
 				paqueteSet.sizeClave = sizeof(parsed.argumentos.SET.clave);
-				strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
+
+				if (strlen(parsed.argumentos.SET.clave) <= 40){ // Maximo permitido por consigna
+					strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
+				} else {
+					printf("Error en SET: La clave en la línea %d supera los 40 caracteres.\n", numline);
+					break;
+				}
+
 				paqueteSet.sizeValor = sizeof(parsed.argumentos.SET.valor);
+
+				if (strlen(parsed.argumentos.SET.valor) < 255){
+					strcpy(paqueteSet.valor, parsed.argumentos.SET.valor);
+				} else {
+					printf("Error en SET: El valor en la línea %d es demasiado grande.\n", numline);
+					break;
+				}
+
 				strcpy(paqueteSet.valor, parsed.argumentos.SET.valor);
 
+				sendHead(coordinadorSocket, header);
 				send(coordinadorSocket, &paqueteSet, sizeof(paqueteSet), 0);
 				break;
 			case STORE:
@@ -117,6 +134,7 @@ int main(int argc, char** argv) {
 
 		read = getline(&line, &len, fp); // 6. parseo de nuevo
 		parsed = parse(line);
+		numline++;
 	}
 
 	fclose(fp);
