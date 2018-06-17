@@ -43,6 +43,12 @@ typedef struct {
 	char valor[255]; // Limitamos los caracteres para usar serializacion estatica
 } __attribute__((packed)) t_set;
 
+
+typedef struct {
+	uint32_t cantidadEntradas;
+	uint32_t sizeofEntrada;
+} __attribute__((packed)) t_initInstancia;
+
 // --------------------------------------------------
 
 char* identificar(e_context);

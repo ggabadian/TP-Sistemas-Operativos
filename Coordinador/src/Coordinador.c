@@ -38,7 +38,6 @@ int main(void) {
 }
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
-//(Pendiente) BUG - Valgrind dice que hay problemas al enviar estructuras con send()
 
 void crearThread(e_context id, int socket) {
 	pthread_t thread;
@@ -94,11 +93,11 @@ void* threadPlanificador(void* socket) {
 
 void* threadESI(void* socket) {
 	int* socketESI = (int*) socket;
-	int conected = 1;
+	int connected = 1;
 	int idESI;
 	recv(*socketESI, &idESI, sizeof(int), 0);
 
-	while (conected) {
+	while (connected) {
 		t_head header = recvHead(*socketESI);
 		char *dato = malloc(header.mSize);
 		t_set paqueteSet;
@@ -107,18 +106,21 @@ void* threadESI(void* socket) {
 			case ACT_GET:
 				recv(*socketESI, dato, header.mSize, 0);
 				printf("Se recibió un GET <%s> del ESI %d \n", dato, idESI);
+				//(Pendiente) log operacion
 				break;
 			case ACT_SET:
 				recv(*socketESI, &paqueteSet, header.mSize, 0);
 				printf("Se recibió un SET <%s> <%s> del ESI %d\n", paqueteSet.clave, paqueteSet.valor, idESI);
+				//(Pendiente) log operacion
 				break;
 			case ACT_STORE:
 				recv(*socketESI, dato, header.mSize, 0);
 				printf("Se recibió un STORE <%s> del ESI %d\n", dato, idESI);
+				//(Pendiente) log operacion
 				break;
 			default:
 				printf("Se perdió la conexión con el ESI %d.\n", idESI);
-				conected = 0;
+				connected = 0;
 		}
 		free(dato);
 	}
@@ -128,16 +130,16 @@ void* threadESI(void* socket) {
 
 void* threadInstancia(void* socket) {
 	int* socketInstancia = (int*) socket;
+	int connected = 1;
 
-	sendInitInstancia(*socketInstancia, CANTIDAD_ENTRADAS,
-			BYTES_ENTRADA);
+	sendInitInstancia(*socketInstancia);
 
-	while (1) {
+	while (connected) {
 //		int headInstancia = recibirHead(eInstancia->socketInstancia);
 //		hacerAlgo(headInstancia);
-	}
 
-//	recibirMensaje(eInstancia->socketInstancia);
+		//connected = 0;
+	}
 
 	close(*socketInstancia);
 	free(socketInstancia);
@@ -154,23 +156,21 @@ void recibirMensaje(int socket) {
 	free(package);
 }
 
-void sendInitInstancia(int socket, int cantEntradas, int sizeEntrada) {
+void sendInitInstancia(int socket) {
 
 	t_head header;
-	t_InitInstancia paquete;
+	t_initInstancia paquete;
 
-	paquete.cantidadEntradas = cantEntradas;
-	paquete.sizeofEntrada = sizeEntrada;
+	paquete.cantidadEntradas = CANTIDAD_ENTRADAS;
+	paquete.sizeofEntrada = BYTES_ENTRADA;
 
 	// Envia el HEAD para que la instancia sepa lo que va a recibir
 	header.context = initDatosInstancia;
 	header.mSize = sizeof(paquete);
 	sendHead(socket, header);
 
-//(PENDIENTE) Serializacion de paquete
-
-//Envia el paquete
-	send(socket, (void*) &paquete, sizeof(paquete), 0);
+	//Envia el paquete
+	send(socket, &paquete, sizeof(paquete), 0);
 
 	puts("Configuración inicial enviada a Instancia.");
 }

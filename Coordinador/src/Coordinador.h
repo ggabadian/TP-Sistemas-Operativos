@@ -7,17 +7,12 @@
 #include <pthread.h>
 #include <stdint.h>
 
-typedef struct {
-	uint32_t cantidadEntradas;
-	uint32_t sizeofEntrada;
-} t_InitInstancia; // __attribute__((packed));
-
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
 void* threadESI(void*);
 void* threadInstancia(void*);
 void recibirMensaje(int);
-void sendInitInstancia(int, int, int);
+void sendInitInstancia(int);
 void freePackage(char **);
 
 #endif
