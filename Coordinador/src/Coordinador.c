@@ -1,15 +1,16 @@
 #include "Coordinador.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Las instancias conectadas se guardan en esta lista
+t_list *instanciasConectadas;
+
 
 int main(void) {
 	puts("Iniciando coordinador...");
 	cargarConfig();
+
+	instanciasConectadas = list_create();
 
 	int listeningSocket = listenSocket(PUERTO);
 
@@ -38,6 +39,7 @@ int main(void) {
 }
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
+//(Pendiente) Semaforos para el manejo de la lista de instancias conectadas
 
 void crearThread(e_context id, int socket) {
 	pthread_t thread;
@@ -69,6 +71,7 @@ void crearThread(e_context id, int socket) {
 			puts("Error en la creación de thread para Instancia");
 			//(Pendiente) log error
 		}
+
 		break;
 	default:
 		puts("Error al crear thread: La conexión es desconocida");
@@ -134,6 +137,8 @@ void* threadInstancia(void* socket) {
 
 	sendInitInstancia(*socketInstancia);
 
+	registrarInstancia(*socketInstancia);
+
 	while (connected) {
 //		int headInstancia = recibirHead(eInstancia->socketInstancia);
 //		hacerAlgo(headInstancia);
@@ -175,6 +180,14 @@ void sendInitInstancia(int socket) {
 	puts("Configuración inicial enviada a Instancia.");
 }
 
-void freePackage(char **package) {
-	free(*package);
+void registrarInstancia(int socket){
+	t_instancia *nuevaInstancia = malloc(sizeof(t_instancia));
+	nuevaInstancia->socket = socket;
+	nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
+
+	//(Pendiente) Semaforo
+	list_add(instanciasConectadas,nuevaInstancia);
+
+	free(nuevaInstancia);
+
 }
