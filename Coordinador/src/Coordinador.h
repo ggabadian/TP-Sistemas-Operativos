@@ -13,6 +13,8 @@
 #include <commons/collections/list.h>
 #include <commons/log.h>
 
+#define ERROR 1
+
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
 void* threadESI(void*);
@@ -20,6 +22,10 @@ void* threadInstancia(void*);
 void recibirMensaje(int);
 void sendInitInstancia(int);
 void registrarInstancia(int);
+void asignarSolicitud();
+void equitativeLoad();
+void leastSpaceUsed();
+void keyExplicit();
 
 
 typedef struct {

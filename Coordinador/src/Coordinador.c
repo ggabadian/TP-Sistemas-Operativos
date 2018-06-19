@@ -9,6 +9,21 @@ t_list *instanciasConectadas;
 int main(void) {
 	puts("Iniciando coordinador...");
 	cargarConfig();
+	puts("Configuración inicial realizada.");
+
+	if (!strcmp(ALGORITMO, "EL")) {
+		puts("Se utilizará el algoritmo de distribución Equitative Load.");
+	}
+	else if (!strcmp(ALGORITMO, "LSU")) {
+		puts("Se utilizará el algoritmo de distribución Least Space Used.");
+	}
+	else if (!strcmp(ALGORITMO, "KE")) {
+		puts("Se utilizará el algoritmo de distribución Key Explicit.");
+	}
+	else {
+		puts("Error: No se pudo determinar el algoritmo de distribución.");
+		return ERROR;
+	}
 
 	instanciasConectadas = list_create();
 
@@ -108,6 +123,12 @@ void* threadESI(void* socket) {
 			case ACT_GET:
 				recv(*socketESI, dato, header.mSize, 0);
 				printf("Se recibió un GET <%s> del ESI %d \n", dato, idESI);
+				// Consultar al planificador
+				// Recibir respuesta del planificador
+				// Si puede, entonces:
+					asignarSolicitud();
+				// si no:
+					//informar bloqueo
 				//(Pendiente) log operacion
 				break;
 			case ACT_SET:
@@ -178,4 +199,32 @@ void registrarInstancia(int socket){
 
 	free(nuevaInstancia);
 
+}
+
+void asignarSolicitud(){
+		if (!strcmp(ALGORITMO, "EL")) {
+			equitativeLoad();
+		}
+		else if (!strcmp(ALGORITMO, "LSU")) {
+			leastSpaceUsed();
+		}
+		else if (!strcmp(ALGORITMO, "KE")) {
+			keyExplicit();
+		}
+		else {
+			puts("Error: No se pudo determinar el algoritmo de distribución");
+			//(Pendiente) log error
+		}
+}
+
+void equitativeLoad(){
+	puts("EL");
+}
+
+void leastSpaceUsed(){
+	puts("LSU");
+}
+
+void keyExplicit(){
+	puts("KE");
 }
