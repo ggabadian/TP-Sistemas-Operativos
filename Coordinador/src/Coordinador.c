@@ -55,6 +55,8 @@ int main(void) {
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
 //(Pendiente) Semaforos para el manejo de la lista de instancias conectadas
+//(Pendiente) BUG - Si se abre una instancia mientras se esta ejecutando un ESI
+//					se rompe la conexion ESI-Coordinador
 
 void crearThread(e_context id, int socket) {
 	pthread_t thread;
@@ -153,20 +155,20 @@ void* threadESI(void* socket) {
 
 void* threadInstancia(void* socket) {
 	int* socketInstancia = (int*) socket;
-	int connected = 1;
+//	int connected = 1;
 
 	sendInitInstancia(*socketInstancia);
 
 	registrarInstancia(*socketInstancia);
 
-	while (connected) {
+//	while (connected) {
 //		int headInstancia = recibirHead(eInstancia->socketInstancia);
 //		hacerAlgo(headInstancia);
 
 		//connected = 0;
-	}
+//	}
 
-	close(*socketInstancia);
+//	close(*socketInstancia);
 	return NULL;
 }
 
@@ -197,7 +199,7 @@ void registrarInstancia(int socket){
 	//(Pendiente) Semaforo
 	list_add(instanciasConectadas,nuevaInstancia);
 
-	free(nuevaInstancia);
+	//free(nuevaInstancia); // Hay que liberarla pero aca no es
 
 }
 
@@ -218,7 +220,25 @@ void asignarSolicitud(){
 }
 
 void equitativeLoad(){
-	puts("EL");
+	if (!list_is_empty(instanciasConectadas)){
+		t_instancia *instanciaElegida;
+
+		// Agarra el primer elemento de la lista (el mas "viejo")
+		instanciaElegida = list_remove(instanciasConectadas, 0);
+
+		// Lo devuelve a la lista en el ultimo lugar (el mas "reciente")
+		list_add(instanciasConectadas, instanciaElegida);
+
+		// Esto es para ver que funciona
+		printf("El socket de la instancia elegida es: %d\n", instanciaElegida->socket);
+
+		// Envia la solicitud a dicho elemento
+		//enviarSolicitud(instanciaElegida, ...);
+
+	} else {
+		puts("Error: No hay ninguna instancia para recibir la solicitud.");
+	}
+
 }
 
 void leastSpaceUsed(){
