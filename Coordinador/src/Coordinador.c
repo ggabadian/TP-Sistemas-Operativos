@@ -86,7 +86,6 @@ void* threadPlanificador(void* socket) {
 //		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
 //		hacerAlgo(headPlanificador);
 	}
-//	recibirMensaje(ePlanificador->socketPlanificador);
 
 	close(*socketPlanificador);
 	free(socketPlanificador);
@@ -147,18 +146,7 @@ void* threadInstancia(void* socket) {
 	}
 
 	close(*socketInstancia);
-	free(socketInstancia);
 	return NULL;
-}
-
-void recibirMensaje(int socket) {
-	char *package = malloc(1024);
-	while (1) {
-		recv(socket, (void*) package, 4, 0);
-		printf("%s", package);
-	}
-	close(socket);
-	free(package);
 }
 
 void sendInitInstancia(int socket) {

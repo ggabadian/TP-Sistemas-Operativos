@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <commons/collections/list.h>
+#include <commons/log.h>
 
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
