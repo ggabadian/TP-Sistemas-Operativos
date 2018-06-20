@@ -200,15 +200,16 @@ void registrarInstancia(int socket){
 	//(Pendiente) Semaforo
 	list_add(instanciasConectadas,nuevaInstancia);
 
-	//free(nuevaInstancia); // Hay que liberarla pero aca no es
+	printf("Socket de instancia registrada: %d\n", socket);
 
+	//free(nuevaInstancia); // Hay que liberarla pero aca no es
 }
 
 void assignSet(t_set paquete){
 	t_instancia *instancia;
 
 	if (!strcmp(ALGORITMO, "EL")) {
-		instancia = equitativeLoad();
+		instancia = equitativeLoad(instanciasConectadas);
 	}
 	else if (!strcmp(ALGORITMO, "LSU")) {
 		instancia = leastSpaceUsed();
@@ -222,21 +223,24 @@ void assignSet(t_set paquete){
 	}
 
 	if(instancia != NULL){
+		//Para testear
+		printf("(Testing) Socket de la instancia elegida: %d\n", instancia->socket);
+		printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
 		sendSet(instancia, paquete);
 	} else {
 		puts("Error: No hay ninguna instancia para recibir la solicitud.");
 	}
 }
 
-t_instancia* equitativeLoad(){
-	if (!list_is_empty(instanciasConectadas)){
+t_instancia* equitativeLoad(t_list *listaDeInstancias){
+	if (!list_is_empty(listaDeInstancias)){
 		t_instancia *instanciaElegida;
 
 		// Agarra el primer elemento de la lista (el mas "viejo")
-		instanciaElegida = list_remove(instanciasConectadas, 0);
+		instanciaElegida = list_remove(listaDeInstancias, 0);
 
 		// Lo devuelve a la lista en el ultimo lugar (el mas "reciente")
-		list_add(instanciasConectadas, instanciaElegida);
+		list_add(listaDeInstancias, instanciaElegida);
 
 		return instanciaElegida;
 	} else {
@@ -244,12 +248,66 @@ t_instancia* equitativeLoad(){
 	}
 }
 
-t_instancia* leastSpaceUsed(){ //(Pendiente)
-	t_instancia *instanciaElegida;
+t_instancia* leastSpaceUsed(){
+	if (!list_is_empty(instanciasConectadas)){
+		t_instancia *instancia;
+		int cantidadAnterior;
+		int cantidadNueva;
 
-	instanciaElegida = list_remove(instanciasConectadas, 0);
+		// Crea una lista auxiliar igual a la de instancias conectadas
+		t_list *auxList = list_create();
+		list_add_all(auxList, instanciasConectadas);
 
-	return instanciaElegida;
+		// Crea una lista para guardar todas las instancias con mayor entradas libres
+		t_list *instanciasCandidatas = list_create();
+
+		// Saca el primer elemento de la lista auxiliar
+		instancia = list_remove(auxList, 0);
+
+		// Guarda la cantidad de entradas libres de esa instancia
+		cantidadAnterior = instancia->entradasLibres;
+
+		// Por ahora es la unica asi que la guarda en la lista de candidatas
+		list_add(instanciasCandidatas, instancia);
+
+		int buscando = 1;
+		while(buscando){
+			if (!list_is_empty(auxList)){
+				// Saca otro elemento
+				instancia = list_remove(auxList, 0);
+
+				// Guarda la cantidad de entradas libres de esa otra instancia
+				cantidadNueva = instancia->entradasLibres;
+
+				if (cantidadNueva > cantidadAnterior){
+					// Descarta todas las candidatas anteriores
+					list_clean(instanciasCandidatas);
+
+					// Agrega la nueva candidata
+					list_add(instanciasCandidatas, instancia);
+				}
+				else if (cantidadNueva == cantidadAnterior){
+					//Agrega otra candidata
+					list_add(instanciasCandidatas, instancia);
+				}
+			} else {
+				buscando = 0; // Deja de buscar
+			}
+		}
+
+		if(list_size(instanciasCandidatas) == 1){
+			instancia = list_remove(instanciasCandidatas, 0);
+		} else { // Hay mas de una candidata
+			// Desempata por Equitative Load
+			instancia = equitativeLoad(instanciasCandidatas);
+		}
+
+		list_destroy(auxList);
+		list_destroy(instanciasCandidatas);
+		return instancia;
+	} else {
+		return NULL;
+	}
 }
 
 t_instancia* keyExplicit(){ //(Pendiente)
@@ -267,6 +325,8 @@ void sendSet(t_instancia *instancia, t_set paquete){
 
 	sendHead(instancia->socket, header);
 	send(instancia->socket, &paquete, sizeof(paquete), 0);
+
+	instancia->entradasLibres--; //(Pendiente) Guardar clave
 }
 
 void assignStore(t_head header, char* clave){
@@ -275,7 +335,7 @@ void assignStore(t_head header, char* clave){
 	//(Pendiente) Analizar a que instancia se va a enviar
 
 	//Para testear la asigno con EL
-	instancia = equitativeLoad();
+	instancia = equitativeLoad(instanciasConectadas);
 
 	if(instancia != NULL){
 		sendStore(instancia, header, clave);

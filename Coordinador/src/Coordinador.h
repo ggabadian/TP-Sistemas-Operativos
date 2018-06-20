@@ -29,7 +29,7 @@ void recibirMensaje(int);
 void sendInitInstancia(int);
 void registrarInstancia(int);
 void assignSet(t_set);
-t_instancia* equitativeLoad();
+t_instancia* equitativeLoad(t_list*);
 t_instancia* leastSpaceUsed();
 t_instancia* keyExplicit();
 void sendSet(t_instancia*, t_set);
