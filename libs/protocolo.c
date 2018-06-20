@@ -39,7 +39,7 @@ char* identificar(e_context id) {
 // Antes de recibir un mensaje se debe recibir el HEAD
 t_head recvHead(int socket){
 	t_head head;
-	if ((recv(socket, &head, sizeof(t_head), 0)) < 0){
+	if ((recv(socket, &head, sizeof(t_head), 0)) <= 0){
 		head.context = ERROR_HEAD;
 		head.mSize = 0;
 		return head;

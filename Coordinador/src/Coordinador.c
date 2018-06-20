@@ -114,7 +114,10 @@ void* threadESI(void* socket) {
 	int* socketESI = (int*) socket;
 	int connected = 1;
 	int idESI;
-	recv(*socketESI, &idESI, sizeof(int), 0);
+	if(recv(*socketESI, &idESI, sizeof(int), 0) <= 0){
+		puts("Error al recibir id del ESI");
+		return NULL;
+	}
 
 	while (connected) {
 		t_head header = recvHead(*socketESI);
@@ -145,9 +148,12 @@ void* threadESI(void* socket) {
 				assignStore(header, dato);
 				//(Pendiente) log operacion
 				break;
-			default:
+			case ERROR_HEAD:
 				printf("Se perdió la conexión con el ESI %d.\n", idESI);
 				connected = 0;
+				break;
+			default:
+				printf("La solicitud del ESI %d es inválida.\n", idESI);
 		}
 		free(dato);
 	}
