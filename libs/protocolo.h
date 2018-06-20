@@ -14,7 +14,8 @@ typedef enum {
 	//otraCosaDelPlanificador,
 
 	ESI,
-	//otraCosaDelESI,
+	blockedESI,
+	okESI,
 
 	INSTANCIA,
 	//otraCosaDeLaInstancia,
@@ -37,11 +38,22 @@ typedef struct {
 // ------------ ESTRUCTURAS COMPARTIDAS -------------
 
 typedef struct {
-	uint32_t sizeClave;
+	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
+	uint32_t idESI;
+} __attribute__((packed)) t_get;
+
+typedef struct {
 	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
 	uint32_t sizeValor;
 	char valor[255]; // Limitamos los caracteres para usar serializacion estatica
+	uint32_t idESI;
 } __attribute__((packed)) t_set;
+
+typedef struct {
+	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
+	uint32_t idESI;
+} __attribute__((packed)) t_store;
+
 
 
 typedef struct {

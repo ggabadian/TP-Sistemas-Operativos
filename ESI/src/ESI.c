@@ -8,9 +8,6 @@ int main(int argc, char** argv) {
 
 	t_head header;
 
-	t_set paqueteSet;
-	memset(&paqueteSet, 0, sizeof(t_set)); //Inicializa toda la estrucutra
-
 	/*
 	 1. Conectarse al planificador.
 	 2. Handshake planificador (recibir ID)
@@ -39,8 +36,6 @@ int main(int argc, char** argv) {
 
 	// abrir archivo
 
-	//enviarHead(coordinadorSocket, ACT_GET);
-
 	FILE * fp;
 	char * line = NULL;
 	size_t len = 0;
@@ -59,10 +54,18 @@ int main(int argc, char** argv) {
 	parsed = parse(line);
 	numline++;
 
-	//send(coordinadorSocket, &ACT_GET, sizeof(ACT_GET),0);
+	t_get paqueteGet;
+	memset(&paqueteGet, 0, sizeof(t_get)); //Inicializa toda la estrucutra
+
+	t_set paqueteSet;
+	memset(&paqueteSet, 0, sizeof(t_set)); //Inicializa toda la estrucutra
+
+	t_store paqueteStore;
+	memset(&paqueteStore, 0, sizeof(t_store)); //Inicializa toda la estrucutra
+
 	while (read != -1) {
 		// 5. esperar orden de ejecucion
-		printf("Presione ENTER para parsear la próxima línea\n");
+		printf("Presione ENTER para parsear la próxima línea");
 		char enter = 0;
 		while (enter != '\r' && enter != '\n') {
 			enter = getchar();
@@ -72,15 +75,23 @@ int main(int argc, char** argv) {
 			switch (parsed.keyword) {
 			case GET:
 				header.context = ACT_GET;
-				header.mSize = strlen(parsed.argumentos.GET.clave) + 1; // +1 por el \0
+				header.mSize = sizeof(paqueteGet);
+
+				if (strlen(parsed.argumentos.GET.clave) <= 40){ // Maximo permitido por consigna
+					strcpy(paqueteGet.clave, parsed.argumentos.GET.clave);
+				} else {
+					printf("Error en GET: La clave en la línea %d supera los 40 caracteres.\n", numline);
+					break;
+				}
+
+				paqueteGet.idESI = id;
+
 				sendHead(coordinadorSocket, header);
-				send(coordinadorSocket, parsed.argumentos.GET.clave, strlen(parsed.argumentos.GET.clave)+1, 0);
+				send(coordinadorSocket, &paqueteGet, sizeof(paqueteGet), 0);
 				break;
 			case SET:
 				header.context = ACT_SET;
 				header.mSize = sizeof(paqueteSet);
-
-				paqueteSet.sizeClave = sizeof(parsed.argumentos.SET.clave);
 
 				if (strlen(parsed.argumentos.SET.clave) <= 40){ // Maximo permitido por consigna
 					strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
@@ -100,15 +111,26 @@ int main(int argc, char** argv) {
 
 				strcpy(paqueteSet.valor, parsed.argumentos.SET.valor);
 
+				paqueteSet.idESI = id;
+
 				sendHead(coordinadorSocket, header);
 				send(coordinadorSocket, &paqueteSet, sizeof(paqueteSet), 0);
 				break;
 			case STORE:
 				header.context = ACT_STORE;
-				header.mSize = strlen(parsed.argumentos.STORE.clave) + 1;
-				sendHead(coordinadorSocket, header);
+				header.mSize = sizeof(paqueteStore);
 
-				send(coordinadorSocket, parsed.argumentos.STORE.clave, strlen(parsed.argumentos.STORE.clave)+1, 0);
+				if (strlen(parsed.argumentos.STORE.clave) <= 40){ // Maximo permitido por consigna
+					strcpy(paqueteStore.clave, parsed.argumentos.STORE.clave);
+				} else {
+					printf("Error en STORE: La clave en la línea %d supera los 40 caracteres.\n", numline);
+					break;
+				}
+
+				paqueteStore.idESI = id;
+
+				sendHead(coordinadorSocket, header);
+				send(coordinadorSocket, &paqueteStore, sizeof(paqueteStore), 0);
 				break;
 			default:
 				fprintf(stderr, "No se pudo interpretar \n");
@@ -131,10 +153,10 @@ int main(int argc, char** argv) {
 		 * if (me bloquee)
 		 * 		continue
 		 */
-
 		read = getline(&line, &len, fp); // 6. parseo de nuevo
 		parsed = parse(line);
 		numline++;
+		printf("\n");
 	}
 
 	fclose(fp);

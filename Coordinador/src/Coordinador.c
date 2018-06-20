@@ -5,6 +5,8 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // Las instancias conectadas se guardan en esta lista
 t_list *instanciasConectadas;
 
+int socketPlanificador;
+
 
 int main(void) {
 	puts("Iniciando coordinador...");
@@ -46,6 +48,9 @@ int main(void) {
 			printf("Conectado a %s.\n", identificar(identificador.context));
 		}
 
+		if (identificador.context == PLANIFICADOR){
+			socketPlanificador = socketCliente;
+		}
 		crearThread(identificador.context, socketCliente);
 	}
 
@@ -119,33 +124,46 @@ void* threadESI(void* socket) {
 		return NULL;
 	}
 
+	t_get paqueteGet;
+	t_set paqueteSet;
+	t_store paqueteStore;
+
 	while (connected) {
 		t_head header = recvHead(*socketESI);
-		char *dato = malloc(header.mSize);
-		t_set paqueteSet;
 
 		switch(header.context){
 			case ACT_GET:
-				recv(*socketESI, dato, header.mSize, 0);
-				printf("Se recibió un GET <%s> del ESI %d \n", dato, idESI);
+				recv(*socketESI, &paqueteGet, header.mSize, 0);
+				printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, idESI);
 				// Consultar al planificador
+				sendHead(socketPlanificador, header);
+				send(socketPlanificador, &paqueteGet, sizeof(paqueteGet), 0);
+
 				// Recibir respuesta del planificador
 				// Si puede, entonces:
 					//informar que puede
 				// si no:
-					//informar bloqueo
+					sendBlockedESI(*socketESI);
 				//(Pendiente) log operacion
 				break;
 			case ACT_SET:
 				recv(*socketESI, &paqueteSet, header.mSize, 0);
 				printf("Se recibió un SET <%s> <%s> del ESI %d\n", paqueteSet.clave, paqueteSet.valor, idESI);
+
+				sendHead(socketPlanificador, header);
+				send(socketPlanificador, &paqueteSet, sizeof(paqueteSet), 0);
+
 				assignSet(paqueteSet);
 				//(Pendiente) log operacion
 				break;
 			case ACT_STORE:
-				recv(*socketESI, dato, header.mSize, 0);
-				printf("Se recibió un STORE <%s> del ESI %d\n", dato, idESI);
-				assignStore(header, dato);
+				recv(*socketESI, &paqueteStore, header.mSize, 0);
+				printf("Se recibió un STORE <%s> del ESI %d\n", paqueteStore.clave, idESI);
+
+				sendHead(socketPlanificador, header);
+				send(socketPlanificador, &paqueteStore, sizeof(paqueteStore), 0);
+
+				assignStore(header, paqueteStore.clave);
 				//(Pendiente) log operacion
 				break;
 			case ERROR_HEAD:
@@ -155,7 +173,6 @@ void* threadESI(void* socket) {
 			default:
 				printf("La solicitud del ESI %d es inválida.\n", idESI);
 		}
-		free(dato);
 	}
 
 	return NULL;
@@ -353,4 +370,13 @@ void assignStore(t_head header, char* clave){
 void sendStore(t_instancia *instancia, t_head header, char* clave){
 	sendHead(instancia->socket, header);
 	send(instancia->socket, clave, header.mSize, 0);
+}
+
+void sendBlockedESI(int socketESI){
+	t_head header;
+
+	header.context = blockedESI;
+	header.mSize = 0;
+
+	sendHead(socketESI, header);
 }

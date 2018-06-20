@@ -90,46 +90,190 @@ int main() {
 //	printf("PUERTO COORDINADOR= %d\n", PUERTO_COORDINADOR);
 //	printf("CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
 
-	int listeningSocket = listenSocket(PUERTO);
-
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
 	printf("Conectado a Coordinador. \n");
 	sendHead(coordinadorSocket, header); // Le avisa que es el planificador
 
+	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
-
-	t_head identificador;
-	int status = 1;
 
 	int idESI = 0; // Cantidad de ESIs conectados
 
-	int socketCliente = acceptSocket(listeningSocket);
+	fd_set master; 		// master file descriptor list
+	fd_set read_fds; 	// temp file descriptor list for select()
+	int fdmax;
+	FD_ZERO(&master);	// clear the master and temp sets
+	FD_ZERO(&read_fds);
 
-	identificador = recvHead(socketCliente);
-	if (identificador.context == ERROR_HEAD) {
-		puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
-	} else {
-		printf("Conectado a %s.\n", identificar(identificador.context));
-	}
+	// add the listener to the master set
+	FD_SET(listeningSocket, &master);
+	FD_SET(coordinadorSocket, &master);
 
-	if (identificador.context==ESI) { // Si es un ESI, le asigna un id
-		idESI ++;
-		send(socketCliente, &idESI, sizeof(idESI), 0);
-	}
+	// keep track of the biggest file descriptor
+	fdmax = (
+			listeningSocket > coordinadorSocket ?
+					listeningSocket : coordinadorSocket);
 
-	char package[PACKAGESIZE];
+	t_get paqueteGet;
+	t_set paqueteSet;
+	t_store paqueteStore;
 
-	while (status != 0) {
-		status = recv(socketCliente, (void*) package, PACKAGESIZE, 0);
-		if (status != 0)
-			printf("%s", package);
+	// main loop
+	for (;;) {
+		read_fds = master; // copy it
+		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("select");
+			exit(4);
+		}
 
-	}
+		// run through the existing connections looking for data to read
+		for (int i = 0; i <= fdmax; i++) {
+			if (FD_ISSET(i, &read_fds)) { // we got one!!
+				if (i == listeningSocket) {
 
-	close(socketCliente);
+					t_head identificador;
+
+					int socketCliente = acceptSocket(listeningSocket);
+					if (socketCliente == -1) {
+						perror("accept");
+					}
+					identificador = recvHead(socketCliente);
+					if (identificador.context == ERROR_HEAD) {
+						puts(
+								"Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
+					} else {
+						printf("Conectado a %s.\n",
+								identificar(identificador.context));
+					}
+
+					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
+						idESI++;
+						send(socketCliente, &idESI, sizeof(idESI), 0);
+					}
+
+					// handle new connections
+
+					FD_SET(socketCliente, &master); // add to master set
+					if (socketCliente > fdmax) {	// keep track of the max
+						fdmax = socketCliente;
+					}
+				} else if (i == coordinadorSocket) { // El coordinador me quiere decir algo
+					t_head header = recvHead(i);
+					if (header.context == ERROR_HEAD) {
+						close(i);
+						FD_CLR(i, &master); // remove from master set
+					} else {
+						// we got some data from the coordinador
+						switch (header.context) {
+						case ACT_GET:
+							recv(i, &paqueteGet, header.mSize, 0);
+							printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, paqueteGet.idESI);
+							// verificar si la solicitud es valida
+							// mandar por si o por no
+							break;
+						case ACT_SET:
+							recv(i, &paqueteSet, header.mSize, 0);
+							printf("Se recibió un SET <%s> <%s> del ESI %d\n",paqueteSet.clave, paqueteSet.valor, paqueteSet.idESI);
+							break;
+						case ACT_STORE:
+							recv(i, &paqueteStore, header.mSize, 0);
+							printf("Se recibió un STORE <%s> del ESI %d \n", paqueteStore.clave, paqueteStore.idESI);
+							break;
+						default:
+							printf("La solicitud del ESI %d es inválida.\n",
+									idESI);
+						}
+					}
+				} else { //Un ESI me quiere decir algo
+					t_head header = recvHead(i);
+					if (header.context == ERROR_HEAD) {
+						close(i);
+						FD_CLR(i, &master
+								); // remove from master set
+					} else {
+						// we got some data from an ESI
+						char* clave = malloc(header.mSize);
+						switch (header.context) {
+						case blockedESI:
+							recv(i, clave, header.mSize, 0);
+							//(Pendiente) Obtener idESI a partir de su socket
+							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n", idESI, clave);
+							// Sacar ESI de cola de listos, agregar a cola de bloqueados por la clave
+							break;
+						case okESI:
+							printf("El ESI %d finalizo su accion correctamente.\n", idESI);
+							break;
+						default:
+							printf("Error en ESI.\n");
+						}
+					}
+				}
+			} // END got new incoming connection
+		} // END looping through file descriptors
+	} // END for(;;)--and you thought it would never end!
+
 	close(listeningSocket);
 
 //	consola();
 
 	return 0;
 }
+
+//int main(void) {
+//
+//	int newfd; 			// newly accept()ed socket descriptor
+//	struct sockaddr_storage remoteaddr; // client address
+//	socklen_t addrlen;
+//
+//	char buf[256];		// buffer for client data
+//	int nbytes;
+//
+//	char remoteIP[INET6_ADDRSTRLEN];
+//
+//	int yes = 1;		// for setsockopt() SO_REUSEADDR, below
+//	int i, j, rv;
+//
+//	struct addrinfo hints, *ai, *p;
+//
+//	// get us a socket and bind it
+//	memset(&hints, 0, sizeof hints);
+//	hints.ai_family = AF_UNSPEC;
+//	hints.ai_socktype = SOCK_STREAM;
+//	hints.ai_flags = AI_PASSIVE;
+//	if ((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0) {
+//		fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
+//		exit(1);
+//	}
+//
+//	for (p = ai; p != NULL; p = p->ai_next) {
+//		listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+//		if (listener < 0) {
+//			continue;
+//		}
+//
+//		// lose the pesky "address already in use" error message
+//		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+//
+//		if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
+//			close(listener);
+//			continue;
+//		}
+//		break;
+//	}
+//
+//	// if we got here, it means we didn't get bound
+//	if (p == NULL) {
+//		fprintf(stderr, "selectserver: failed to bind\n");
+//		exit(2);
+//	}
+//
+//	freeaddrinfo(ai); // all done with this
+//
+//	// listen
+//	if (listen(listener, 10) == -1) {
+//		perror("listen");
+//		exit(3);
+//	}
+//
+//	return 0;
+//}

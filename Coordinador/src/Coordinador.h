@@ -35,5 +35,6 @@ t_instancia* keyExplicit();
 void sendSet(t_instancia*, t_set);
 void assignStore(t_head, char*);
 void sendStore(t_instancia*, t_head, char*);
+void sendBlockedESI(int);
 
 #endif
