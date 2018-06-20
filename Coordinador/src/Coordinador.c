@@ -128,7 +128,7 @@ void* threadESI(void* socket) {
 				// Consultar al planificador
 				// Recibir respuesta del planificador
 				// Si puede, entonces:
-					asignarSolicitud();
+					//informar que puede
 				// si no:
 					//informar bloqueo
 				//(Pendiente) log operacion
@@ -136,6 +136,7 @@ void* threadESI(void* socket) {
 			case ACT_SET:
 				recv(*socketESI, &paqueteSet, header.mSize, 0);
 				printf("Se recibió un SET <%s> <%s> del ESI %d\n", paqueteSet.clave, paqueteSet.valor, idESI);
+				assignSet(paqueteSet);
 				//(Pendiente) log operacion
 				break;
 			case ACT_STORE:
@@ -155,20 +156,19 @@ void* threadESI(void* socket) {
 
 void* threadInstancia(void* socket) {
 	int* socketInstancia = (int*) socket;
-//	int connected = 1;
+	int compact = 1;
 
 	sendInitInstancia(*socketInstancia);
 
 	registrarInstancia(*socketInstancia);
 
-//	while (connected) {
-//		int headInstancia = recibirHead(eInstancia->socketInstancia);
-//		hacerAlgo(headInstancia);
+	while (compact) {
+		//compactar();
 
-		//connected = 0;
-//	}
+		//compact = 0;
+	}
 
-//	close(*socketInstancia);
+	close(*socketInstancia);
 	return NULL;
 }
 
@@ -203,23 +203,33 @@ void registrarInstancia(int socket){
 
 }
 
-void asignarSolicitud(){
-		if (!strcmp(ALGORITMO, "EL")) {
-			equitativeLoad();
-		}
-		else if (!strcmp(ALGORITMO, "LSU")) {
-			leastSpaceUsed();
-		}
-		else if (!strcmp(ALGORITMO, "KE")) {
-			keyExplicit();
-		}
-		else {
-			puts("Error: No se pudo determinar el algoritmo de distribución");
-			//(Pendiente) log error
-		}
+void assignSet(t_set paquete){
+	t_instancia *instancia;
+
+	if (!strcmp(ALGORITMO, "EL")) {
+		instancia = equitativeLoad();
+	}
+	else if (!strcmp(ALGORITMO, "LSU")) {
+		instancia = leastSpaceUsed();
+	}
+	else if (!strcmp(ALGORITMO, "KE")) {
+		instancia = keyExplicit();
+	}
+	else {
+		puts("Error: No se pudo determinar el algoritmo de distribución");
+		return;
+	}
+
+	if(instancia != NULL){
+		// Esto es para ver que funciona
+		printf("El socket de la instancia elegida es: %d\n", instancia->socket);
+		//sendSet(instancia, paquete);
+	} else {
+		puts("Error: No hay ninguna instancia para recibir la solicitud.");
+	}
 }
 
-void equitativeLoad(){
+t_instancia* equitativeLoad(){
 	if (!list_is_empty(instanciasConectadas)){
 		t_instancia *instanciaElegida;
 
@@ -229,22 +239,24 @@ void equitativeLoad(){
 		// Lo devuelve a la lista en el ultimo lugar (el mas "reciente")
 		list_add(instanciasConectadas, instanciaElegida);
 
-		// Esto es para ver que funciona
-		printf("El socket de la instancia elegida es: %d\n", instanciaElegida->socket);
-
-		// Envia la solicitud a dicho elemento
-		//enviarSolicitud(instanciaElegida, ...);
-
+		return instanciaElegida;
 	} else {
-		puts("Error: No hay ninguna instancia para recibir la solicitud.");
+		return NULL;
 	}
-
 }
 
-void leastSpaceUsed(){
-	puts("LSU");
+t_instancia* leastSpaceUsed(){ //(Pendiente)
+	t_instancia *instanciaElegida;
+
+	instanciaElegida = list_remove(instanciasConectadas, 0);
+
+	return instanciaElegida;
 }
 
-void keyExplicit(){
-	puts("KE");
+t_instancia* keyExplicit(){ //(Pendiente)
+	t_instancia *instanciaElegida;
+
+	instanciaElegida = list_remove(instanciasConectadas, 0);
+
+	return instanciaElegida;
 }

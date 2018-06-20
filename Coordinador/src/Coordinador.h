@@ -15,6 +15,12 @@
 
 #define ERROR 1
 
+typedef struct {
+	int socket;
+	int entradasLibres;
+	//lista de claves
+} __attribute__((packed)) t_instancia;
+
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
 void* threadESI(void*);
@@ -22,17 +28,9 @@ void* threadInstancia(void*);
 void recibirMensaje(int);
 void sendInitInstancia(int);
 void registrarInstancia(int);
-void asignarSolicitud();
-void equitativeLoad();
-void leastSpaceUsed();
-void keyExplicit();
-
-
-typedef struct {
-	int socket;
-	int entradasLibres;
-	//lista de claves
-} __attribute__((packed)) t_instancia;
-
+void assignSet(t_set);
+t_instancia* equitativeLoad();
+t_instancia* leastSpaceUsed();
+t_instancia* keyExplicit();
 
 #endif
