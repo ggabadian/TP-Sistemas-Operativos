@@ -32,5 +32,8 @@ void assignSet(t_set);
 t_instancia* equitativeLoad();
 t_instancia* leastSpaceUsed();
 t_instancia* keyExplicit();
+void sendSet(t_instancia*, t_set);
+void assignStore(t_head, char*);
+void sendStore(t_instancia*, t_head, char*);
 
 #endif

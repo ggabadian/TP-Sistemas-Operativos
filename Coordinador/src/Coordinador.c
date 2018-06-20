@@ -142,6 +142,7 @@ void* threadESI(void* socket) {
 			case ACT_STORE:
 				recv(*socketESI, dato, header.mSize, 0);
 				printf("Se recibió un STORE <%s> del ESI %d\n", dato, idESI);
+				assignStore(header, dato);
 				//(Pendiente) log operacion
 				break;
 			default:
@@ -221,9 +222,7 @@ void assignSet(t_set paquete){
 	}
 
 	if(instancia != NULL){
-		// Esto es para ver que funciona
-		printf("El socket de la instancia elegida es: %d\n", instancia->socket);
-		//sendSet(instancia, paquete);
+		sendSet(instancia, paquete);
 	} else {
 		puts("Error: No hay ninguna instancia para recibir la solicitud.");
 	}
@@ -259,4 +258,33 @@ t_instancia* keyExplicit(){ //(Pendiente)
 	instanciaElegida = list_remove(instanciasConectadas, 0);
 
 	return instanciaElegida;
+}
+
+void sendSet(t_instancia *instancia, t_set paquete){
+	t_head header;
+	header.context = ACT_SET;
+	header.mSize = sizeof(paquete);
+
+	sendHead(instancia->socket, header);
+	send(instancia->socket, &paquete, sizeof(paquete), 0);
+}
+
+void assignStore(t_head header, char* clave){
+	t_instancia *instancia;
+
+	//(Pendiente) Analizar a que instancia se va a enviar
+
+	//Para testear la asigno con EL
+	instancia = equitativeLoad();
+
+	if(instancia != NULL){
+		sendStore(instancia, header, clave);
+	} else {
+		puts("Error: No hay ninguna instancia para recibir la solicitud.");
+	}
+}
+
+void sendStore(t_instancia *instancia, t_head header, char* clave){
+	sendHead(instancia->socket, header);
+	send(instancia->socket, clave, header.mSize, 0);
 }
