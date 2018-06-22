@@ -102,24 +102,23 @@ void crearThread(e_context id, int socket) {
 }
 
 void* threadPlanificador(void* socket) {
-	int* socketPlanificador = (int*) socket;
+	int socketPlanificador = *(int*)socket;
 
 	while (1) {
 //		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
 //		hacerAlgo(headPlanificador);
 	}
 
-	close(*socketPlanificador);
-	free(socketPlanificador);
+	close(socketPlanificador);
 
 	return NULL;
 }
 
 void* threadESI(void* socket) {
-	int* socketESI = (int*) socket;
+	int socketESI = *(int*)socket;
 	int connected = 1;
 	int idESI;
-	if(recv(*socketESI, &idESI, sizeof(int), 0) <= 0){
+	if(recv(socketESI, &idESI, sizeof(int), 0) <= 0){
 		puts("Error al recibir id del ESI");
 		return NULL;
 	}
@@ -129,11 +128,11 @@ void* threadESI(void* socket) {
 	t_store paqueteStore;
 
 	while (connected) {
-		t_head header = recvHead(*socketESI);
+		t_head header = recvHead(socketESI);
 
 		switch(header.context){
 			case ACT_GET:
-				recv(*socketESI, &paqueteGet, header.mSize, 0);
+				recv(socketESI, &paqueteGet, header.mSize, 0);
 				printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, idESI);
 				// Consultar al planificador
 				sendHead(socketPlanificador, header);
@@ -143,11 +142,11 @@ void* threadESI(void* socket) {
 				// Si puede, entonces:
 					//informar que puede
 				// si no:
-					sendBlockedESI(*socketESI);
+					sendBlockedESI(socketESI);
 				//(Pendiente) log operacion
 				break;
 			case ACT_SET:
-				recv(*socketESI, &paqueteSet, header.mSize, 0);
+				recv(socketESI, &paqueteSet, header.mSize, 0);
 				printf("Se recibió un SET <%s> <%s> del ESI %d\n", paqueteSet.clave, paqueteSet.valor, idESI);
 
 				sendHead(socketPlanificador, header);
@@ -157,7 +156,7 @@ void* threadESI(void* socket) {
 				//(Pendiente) log operacion
 				break;
 			case ACT_STORE:
-				recv(*socketESI, &paqueteStore, header.mSize, 0);
+				recv(socketESI, &paqueteStore, header.mSize, 0);
 				printf("Se recibió un STORE <%s> del ESI %d\n", paqueteStore.clave, idESI);
 
 				sendHead(socketPlanificador, header);
@@ -179,12 +178,12 @@ void* threadESI(void* socket) {
 }
 
 void* threadInstancia(void* socket) {
-	int* socketInstancia = (int*) socket;
+	int socketInstancia = *(int*)socket;
 	int compact = 1;
 
-	sendInitInstancia(*socketInstancia);
+	sendInitInstancia(socketInstancia);
 
-	registrarInstancia(*socketInstancia);
+	registrarInstancia(socketInstancia);
 
 	while (compact) {
 		//compactar();
@@ -192,7 +191,7 @@ void* threadInstancia(void* socket) {
 		//compact = 0;
 	}
 
-	close(*socketInstancia);
+	close(socketInstancia);
 	return NULL;
 }
 
