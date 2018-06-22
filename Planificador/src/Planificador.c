@@ -1,5 +1,13 @@
 #include "Planificador.h"
 
+
+// Defino los nombres de las listas a utilizar
+t_list *listos;
+t_list *bloqueados;
+t_list *finalizados;
+t_list *clBloqueadas;
+
+
 void consola() {
 	system("clear");
 	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
@@ -12,9 +20,9 @@ void consola() {
 	puts("7) Deadlock");
 	printf("Ingrese Nro de comando: ");
 	int opcion;
-	char* clave;
-	char* id;
-	char* recurso;
+	//char* clave;
+	//char* id;
+	//char* recurso;
 	scanf("%d", &opcion);
 
 	switch (opcion) {
@@ -35,30 +43,30 @@ void consola() {
 		system("clear");
 		puts("BLOQUEAR");
 		printf("Inserte Clave: ");
-		scanf("%s", clave);
+		//scanf("%s", clave);
 		printf("\nInserte ID: ");
-		scanf("%s", id);
+		//scanf("%s", id);
 		break;
 
 	case 3:
 		system("clear");
 		puts("DESBLOQUEAR");
 		printf("Inserte Clave: ");
-		scanf("%s", clave);
+		//scanf("%s", clave);
 		break;
 
 	case 4:
 		system("clear");
 		puts("LISTAR");
 		printf("Inserte Recurso: ");
-		scanf("%s", recurso);
+		//scanf("%s", recurso);
 		break;
 
 	case 5:
 		system("clear");
 		puts("KILL");
 		printf("Escriba el ID del proceso a matar: ");
-		scanf("%s", id);
+		//scanf("%s", id);
 		break;
 
 	case 6:
@@ -77,6 +85,11 @@ void consola() {
 int main() {
 	puts("Iniciando planificador...");
 	cargarConfigPlanificador();
+
+	listos = list_create();
+	bloqueados = list_create();
+	finalizados = list_create();
+	clBloqueadas = list_create();
 
 	t_head header;
 	header.context = PLANIFICADOR;
@@ -149,6 +162,7 @@ int main() {
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
 						idESI++;
 						send(socketCliente, &idESI, sizeof(idESI), 0);
+						agregarESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
 					}
 
 					// handle new connections
@@ -188,8 +202,7 @@ int main() {
 					t_head header = recvHead(i);
 					if (header.context == ERROR_HEAD) {
 						close(i);
-						FD_CLR(i, &master
-								); // remove from master set
+						FD_CLR(i, &master); // remove from master set
 					} else {
 						// we got some data from an ESI
 						char* clave = malloc(header.mSize);
@@ -217,6 +230,20 @@ int main() {
 //	consola();
 
 	return 0;
+}
+
+
+//************* FUNCIONES *******************
+
+void agregarESIAColaDeListos(int socketESI, int id) {
+	t_ESI *nuevoESI = malloc(sizeof(t_ESI));
+	nuevoESI->idESI = id;
+	nuevoESI->socket = socketESI;
+	nuevoESI->esperaClave = NULL;
+	nuevoESI->estAntRaf = ESTIMACION_I;
+	nuevoESI->estSigRaf = ESTIMACION_I;
+
+	list_add(listos, nuevoESI);
 }
 
 //int main(void) {
