@@ -7,9 +7,14 @@ t_list *instanciasConectadas;
 
 int socketPlanificador;
 
+//esta funcion tira un warning que queda para corregir
 
 int main(void) {
-	puts("Iniciando coordinador...");
+	t_log* logCoordinador;//puede que haya que ponerla global si se usa en alguna funcion
+	//creo el logger
+	logCoordinador = log_create("../log/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
+	//se usa para escribir en el archivo de log y lo muestra por pantalla
+	log_trace(logCoordinador, "Iniciando Coordinador");
 	cargarConfig();
 	puts("Configuración inicial realizada.");
 
@@ -55,6 +60,7 @@ int main(void) {
 	}
 
 	close(listeningSocket);
+	log_destroy(logCoordinador);
 	return 0;
 }
 

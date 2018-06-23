@@ -83,7 +83,11 @@ void consola() {
 }
 
 int main() {
-	puts("Iniciando planificador...");
+	t_log* logPlanificador;//puede que haya que ponerla global si se usa en alguna funcion
+	//creo el logger
+	logPlanificador = log_create("../log/logDePlanificador.log", "Planificador", true, LOG_LEVEL_TRACE);
+	//se usa para escribir en el archivo de log y lo muestra por pantalla
+	log_trace(logPlanificador, "Iniciando Planificador");
 	cargarConfigPlanificador();
 
 	listos = list_create();
@@ -226,7 +230,7 @@ int main() {
 	} // END for(;;)--and you thought it would never end!
 
 	close(listeningSocket);
-
+	log_destroy(logPlanificador);
 //	consola();
 
 	return 0;

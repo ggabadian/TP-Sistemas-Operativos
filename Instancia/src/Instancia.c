@@ -128,6 +128,11 @@ void finDumping(){
 }
 
 int main(void) {
+	t_log* logInstancia;//puede que haya que ponerla global si se usa en alguna funcion
+	//creo el logger
+	logInstancia = log_create("../log/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
+	//se usa para escribir en el archivo de log y lo muestra por pantalla
+	log_trace(logInstancia, "Iniciando Instancia");
 	cargarConfig();
 
 	int estado;
@@ -180,6 +185,6 @@ int main(void) {
 		}
 		sleep(3);
 	}
-
+	log_destroy(logInstancia);
 	return EXIT_SUCCESS;
 }

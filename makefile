@@ -1,5 +1,6 @@
 COMPILER=gcc
 BIN_PATH=bin
+LOG_PATH=log
 LIBS = libs/protocolo.c -lcommons -pthread # Define referencias
 CLIENTE = libs/socketClient.c
 SERVIDOR = libs/socketServer.c
@@ -14,6 +15,7 @@ all: clean coordinador planificador instancia esi
 
 clean:
 	rm -rf bin
+	@rm -rf ${LOG_PATH}/*.log
 
 coordinador:
 	mkdir -p $(BIN_PATH)
