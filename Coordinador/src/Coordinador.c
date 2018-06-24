@@ -1,12 +1,5 @@
 #include "Coordinador.h"
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Las instancias conectadas se guardan en esta lista
-t_list *instanciasConectadas;
-
-int socketPlanificador;
-
 //esta funcion tira un warning que queda para corregir
 
 int main(void) {
@@ -168,7 +161,7 @@ void* threadESI(void* socket) {
 				sendHead(socketPlanificador, header);
 				send(socketPlanificador, &paqueteStore, sizeof(paqueteStore), 0);
 
-				assignStore(header, paqueteStore.clave);
+				//assignStore(header, paqueteStore.clave);
 				//(Pendiente) log operacion
 				break;
 			case ERROR_HEAD:
@@ -237,7 +230,7 @@ void assignSet(t_set paquete){
 	t_instancia *instancia;
 
 	if (!strcmp(ALGORITMO, "EL")) {
-		instancia = equitativeLoad(instanciasConectadas);
+		instancia = equitativeLoad();
 	}
 	else if (!strcmp(ALGORITMO, "LSU")) {
 		instancia = leastSpaceUsed();
@@ -260,23 +253,20 @@ void assignSet(t_set paquete){
 	}
 }
 
-t_instancia* equitativeLoad(t_list *listaDeInstancias){
-	if (!list_is_empty(listaDeInstancias)){
-		t_instancia *instanciaElegida;
+t_instancia* equitativeLoad(){
+	if (!list_is_empty(instanciasConectadas)){
+		// Si la instancia anterior que eligio era la ultima, vuelve al principio
+		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
+			indexEquitativeLoad = 0;
 
-		// Agarra el primer elemento de la lista (el mas "viejo")
-		instanciaElegida = list_remove(listaDeInstancias, 0);
-
-		// Lo devuelve a la lista en el ultimo lugar (el mas "reciente")
-		list_add(listaDeInstancias, instanciaElegida);
-
-		return instanciaElegida;
+		// Retorna la instancia correspondiente al index y lo incrementa
+		return list_get(instanciasConectadas, indexEquitativeLoad ++);
 	} else {
 		return NULL;
 	}
 }
 
-t_instancia* leastSpaceUsed(){
+t_instancia* leastSpaceUsed(){ //(Pendiente) Bug fix
 	if (!list_is_empty(instanciasConectadas)){
 		t_instancia *instancia;
 		int cantidadAnterior;
@@ -323,12 +313,12 @@ t_instancia* leastSpaceUsed(){
 			}
 		}
 
-		if(list_size(instanciasCandidatas) == 1){
+//		if(list_size(instanciasCandidatas) == 1){
 			instancia = list_remove(instanciasCandidatas, 0);
-		} else { // Hay mas de una candidata
+//		} else { // Hay mas de una candidata
 			// Desempata por Equitative Load
-			instancia = equitativeLoad(instanciasCandidatas);
-		}
+//			instancia = equitativeLoad(instanciasCandidatas);
+//		}
 
 		list_destroy(auxList);
 		list_destroy(instanciasCandidatas);
@@ -357,19 +347,19 @@ void sendSet(t_instancia *instancia, t_set paquete){
 	instancia->entradasLibres--; //(Pendiente) Guardar clave
 }
 
-void assignStore(t_head header, char* clave){
-	t_instancia *instancia;
+void assignStore(t_head header, char* clave){ //(Pendiente)
+/*	t_instancia *instancia;
 
 	//(Pendiente) Analizar a que instancia se va a enviar
 
 	//Para testear la asigno con EL
-	instancia = equitativeLoad(instanciasConectadas);
+	//instancia = equitativeLoad(instanciasConectadas);
 
 	if(instancia != NULL){
 		sendStore(instancia, header, clave);
 	} else {
 		puts("Error: No hay ninguna instancia para recibir la solicitud.");
-	}
+	}*/
 }
 
 void sendStore(t_instancia *instancia, t_head header, char* clave){

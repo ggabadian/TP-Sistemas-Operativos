@@ -55,6 +55,7 @@ dkms.conf
 
 .metadata
 bin/
+log/
 tmp/
 *.tmp
 *.bak
