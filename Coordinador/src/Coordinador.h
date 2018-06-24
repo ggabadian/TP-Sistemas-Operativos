@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <commons/collections/list.h>
 #include <commons/log.h>
+#include <math.h>
 
 #define ERROR 1
 
@@ -42,7 +43,7 @@ void registrarInstancia(int);
 void assignSet(t_set);
 t_instancia* equitativeLoad();
 t_instancia* leastSpaceUsed();
-t_instancia* keyExplicit();
+t_instancia* keyExplicit(char*);
 void sendSet(t_instancia*, t_set);
 void assignStore(t_head, char*);
 void sendStore(t_instancia*, t_head, char*);
