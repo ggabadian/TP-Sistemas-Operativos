@@ -19,7 +19,7 @@ clean:
 
 coordinador:
 	mkdir -p $(BIN_PATH)
-	$(COMPILER) -g -Wall Coordinador/src/Coordinador.h Coordinador/src/Coordinador.c Coordinador/src/configCoordinador.c $(SERVIDOR) $(LIBS) -lparsi -o $(BIN_PATH)/Coordinador
+	$(COMPILER) -g -Wall Coordinador/src/Coordinador.h Coordinador/src/Coordinador.c Coordinador/src/configCoordinador.c $(SERVIDOR) $(LIBS) -lm -o $(BIN_PATH)/Coordinador
 
 planificador:
 	mkdir -p $(BIN_PATH)

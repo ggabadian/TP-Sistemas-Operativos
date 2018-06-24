@@ -1,5 +1,7 @@
 #include "Coordinador.h"
 
+#include <math.h>
+
 //esta funcion tira un warning que queda para corregir
 
 int main(void) {
@@ -291,8 +293,50 @@ t_instancia* leastSpaceUsed(){
 
 t_instancia* keyExplicit(){ //(Pendiente)
 	t_instancia *instanciaElegida;
+	// Esto es para testear ahora
+	int testInstanciasConectadas = 11; // list_size(instanciasConecetadas)
+	// Cantidad de instancias que almacenarán claves
+	int instanciasOcupadas = 0;
+	// Cantidad de letras de las instancias que almacenarán claves (excepto la última)
+	int letrasPorInstancia = 0;
+	// Cantidad de letras de la última instancia que almacenará claves
+	int letrasUltimaInstancia = 0;
 
-	instanciaElegida = list_remove(instanciasConectadas, 0);
+	// 25 es la cantidad del rango de letras
+	double division = 25/(double)testInstanciasConectadas;
+
+	// Distribuye apropiadamente la cantidad de letras segun la cantidad de instancias
+	if(division > 3){
+		letrasPorInstancia = (int)ceil(division); // Redondea siempre para arriba
+		letrasUltimaInstancia = letrasPorInstancia + ((division - letrasPorInstancia)*testInstanciasConectadas);
+		instanciasOcupadas = testInstanciasConectadas;
+		if (letrasUltimaInstancia < 0){
+			letrasUltimaInstancia = letrasPorInstancia + letrasUltimaInstancia;
+			instanciasOcupadas --;
+		}
+	}
+	else if (division > 2 && division < 3){
+		instanciasOcupadas = 9;
+		letrasPorInstancia = 3;
+		letrasUltimaInstancia = 1;
+	}
+	else if (division > 1 && division < 2){
+		instanciasOcupadas = 13;
+		letrasPorInstancia = 2;
+		letrasUltimaInstancia = 1;
+	}
+	else if (division <= 1){
+		instanciasOcupadas = 25;
+		letrasPorInstancia = 1;
+		letrasUltimaInstancia = 1;
+	}
+	//--- Fin distribución ---
+
+
+	printf("(Testing) Instancias ocupadas: %d de %d\n Letras por instancia ocupada: %d\n Letras para la ultima instancia ocupada: %d\n", instanciasOcupadas, testInstanciasConectadas, letrasPorInstancia, letrasUltimaInstancia);
+
+	// Para testear, por ahora uso EL
+	instanciaElegida = equitativeLoad();
 
 	return instanciaElegida;
 }
