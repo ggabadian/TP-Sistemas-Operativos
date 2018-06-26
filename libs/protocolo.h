@@ -18,7 +18,7 @@ typedef enum {
 	okESI,
 
 	INSTANCIA,
-	//otraCosaDeLaInstancia,
+	nombreInstancia,
 
 	// MENSAJES COMPARTIDOS
 	ERROR_HEAD,

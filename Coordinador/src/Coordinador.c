@@ -70,15 +70,14 @@ void crearThread(e_context id, int socket) {
 
 	switch(id){
 	case PLANIFICADOR:
-		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador,
-				(void*) &socket);
+		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador, &socket);
 		if (statusPlanificador) {
 			puts("Error en la creación de thread para Planificador");
 			//(Pendiente) log error
 		}
 		break;
 	case ESI:
-		statusESI = pthread_create(&thread, NULL, &threadESI, (void*) &socket);
+		statusESI = pthread_create(&thread, NULL, &threadESI, &socket);
 
 		if (statusESI) {
 			puts("Error en la creación de thread para ESI");
@@ -86,8 +85,7 @@ void crearThread(e_context id, int socket) {
 		}
 		break;
 	case INSTANCIA:
-		statusInstancia = pthread_create(&thread, NULL, &threadInstancia,
-				(void*) &socket);
+		statusInstancia = pthread_create(&thread, NULL, &threadInstancia, &socket);
 		if (statusInstancia) {
 			puts("Error en la creación de thread para Instancia");
 			//(Pendiente) log error
@@ -179,10 +177,20 @@ void* threadESI(void* socket) {
 void* threadInstancia(void* socket) {
 	int socketInstancia = *(int*)socket;
 	int compact = 1;
+	t_head header;
 
 	sendInitInstancia(socketInstancia);
 
-	registrarInstancia(socketInstancia);
+	header = recvHead(socketInstancia);
+	if (header.context == nombreInstancia){
+		char* nombreDeInstancia = malloc(header.mSize + 1);
+		recv(socketInstancia, nombreDeInstancia, header.mSize, 0);
+
+		registrarInstancia(socketInstancia, nombreDeInstancia);
+	} else {
+		puts("Error: No se recibió el nombre de la instancia.");
+		return NULL;
+	}
 
 	while (compact) {
 		//compactar();
@@ -213,15 +221,20 @@ void sendInitInstancia(int socket) {
 	puts("Configuración inicial enviada a Instancia.");
 }
 
-void registrarInstancia(int socket){
-	t_instancia *nuevaInstancia = malloc(sizeof(t_instancia));
+void registrarInstancia(int socket, char* nombre){
+	t_instancia *nuevaInstancia = malloc(sizeof(t_instancia)+ strlen(nombre));
+
+	// Si el nombre no estaba registrado, entonces:
+		nuevaInstancia->nombre = nombre;
+		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
+	// Fin Si
+
 	nuevaInstancia->socket = socket;
-	nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
 
 	//(Pendiente) Semaforo
 	list_add(instanciasConectadas,nuevaInstancia);
 
-	printf("Socket de instancia registrada: %d\n", socket);
+	printf("Instancia registrada: %s con socket %d\n", nuevaInstancia->nombre, socket);
 
 	//free(nuevaInstancia); // Hay que liberarla pero aca no es
 }

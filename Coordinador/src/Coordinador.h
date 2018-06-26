@@ -28,9 +28,10 @@ int indexEquitativeLoad = 0;
 
 
 typedef struct {
+	char* nombre;
 	int socket;
 	int entradasLibres;
-	//lista de claves
+	t_list claves;
 } __attribute__((packed)) t_instancia;
 
 void crearThread(e_context, int);
@@ -39,7 +40,7 @@ void* threadESI(void*);
 void* threadInstancia(void*);
 void recibirMensaje(int);
 void sendInitInstancia(int);
-void registrarInstancia(int);
+void registrarInstancia(int, char*);
 void assignSet(t_set);
 t_instancia* equitativeLoad();
 t_instancia* leastSpaceUsed();

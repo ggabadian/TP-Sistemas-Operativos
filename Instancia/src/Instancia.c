@@ -2,14 +2,22 @@
 
 bool conectarCoordinador(){
 	t_head header;
-	header.context = INSTANCIA;
-	header.mSize = 0;
 
 	//conecta mediante un socket la instancia con el coordinador
 	puts("Conectando al coordinador");
 
 	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
-	sendHead(SOCKET_COORDINADOR, header); // Le avisa que es una INSTANCIA
+
+	// Le avisa que es una INSTANCIA
+	header.context = INSTANCIA;
+	header.mSize = 0;
+	sendHead(SOCKET_COORDINADOR, header);
+
+	// Le envía su nombre
+	header.context = nombreInstancia;
+	header.mSize = strlen(NOMBRE);
+	sendHead(SOCKET_COORDINADOR, header);
+	send(SOCKET_COORDINADOR, NOMBRE, header.mSize, 0);
 
 	return true;
 }
