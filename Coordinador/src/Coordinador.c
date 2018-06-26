@@ -223,20 +223,37 @@ void sendInitInstancia(int socket) {
 
 void registrarInstancia(int socket, char* nombre){
 	t_instancia *nuevaInstancia = malloc(sizeof(t_instancia)+ strlen(nombre));
+	t_instancia *instancia = instanciaRegistrada(nombre);
 
-	// Si el nombre no estaba registrado, entonces:
+	// Si el nombre no estaba registrado
+	if (instancia == NULL){
 		nuevaInstancia->nombre = nombre;
+		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
-	// Fin Si
 
-	nuevaInstancia->socket = socket;
+		list_add(instanciasConectadas,nuevaInstancia);
+		printf("Instancia registrada: <%s> ", nuevaInstancia->nombre);
+	} else {
+		// Actualiza el socket
+		instancia->socket = socket;
+		printf("La instancia <%s> se reincorporó al sistema ", instancia->nombre);
+	}
 
-	//(Pendiente) Semaforo
-	list_add(instanciasConectadas,nuevaInstancia);
-
-	printf("Instancia registrada: %s con socket %d\n", nuevaInstancia->nombre, socket);
+	printf("con socket %d.\n", socket);
 
 	//free(nuevaInstancia); // Hay que liberarla pero aca no es
+}
+
+t_instancia *instanciaRegistrada(char* nombre){
+	t_instancia *instancia;
+	int index = 0;
+
+	while(index < list_size(instanciasConectadas)){
+		instancia = list_get(instanciasConectadas, index++);
+		if (!strcmp(nombre, instancia->nombre)) return instancia;
+	}
+
+	return NULL;
 }
 
 void assignSet(t_set paquete){

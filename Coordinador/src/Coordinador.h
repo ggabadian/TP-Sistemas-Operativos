@@ -41,6 +41,7 @@ void* threadInstancia(void*);
 void recibirMensaje(int);
 void sendInitInstancia(int);
 void registrarInstancia(int, char*);
+t_instancia* instanciaRegistrada(char*);
 void assignSet(t_set);
 t_instancia* equitativeLoad();
 t_instancia* leastSpaceUsed();
@@ -49,5 +50,6 @@ void sendSet(t_instancia*, t_set);
 void assignStore(t_head, char*);
 void sendStore(t_instancia*, t_head, char*);
 void sendBlockedESI(int);
+
 
 #endif
