@@ -135,13 +135,13 @@ void finDumping(){
 
 }
 
-int main(void) {
+int main(int argc, char* argv[]) {
 	t_log* logInstancia;//puede que haya que ponerla global si se usa en alguna funcion
 	//creo el logger
 	logInstancia = log_create("../log/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	log_trace(logInstancia, "Iniciando Instancia");
-	cargarConfig();
+	cargarConfig(argv[1]);
 
 	int estado;
 	/* 0: No Conectada

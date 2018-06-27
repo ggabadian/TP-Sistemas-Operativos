@@ -1,7 +1,7 @@
 #include "configInstancia.h"
 
-void cargarConfig() {
-	t_config *configInstancia = config_create(PATH_INSTANCIA_CONFIG);
+void cargarConfig(char* path) {
+	t_config *configInstancia = config_create(path);
 
 	IP_COORDINADOR = strdup(config_get_string_value(configInstancia, "IP_COORDINADOR"));
 	PUERTO_COORDINADOR = strdup(config_get_string_value(configInstancia, "PUERTO_COORDINADOR"));

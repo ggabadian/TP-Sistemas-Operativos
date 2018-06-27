@@ -68,13 +68,17 @@ int main(int argc, char** argv) {
 	memset(&paqueteStore, 0, sizeof(t_store)); //Inicializa toda la estrucutra
 
 	while (read != -1) {
-		// 5. esperar orden de ejecucion
+		// 5. esperar orden de ejecucion (trucho)
 		printf("Presione ENTER para parsear la próxima línea");
 		char enter = 0;
 		while (enter != '\r' && enter != '\n') {
 			enter = getchar();
 		}
 
+		// 5. esperar orden de ejecucion (posta)
+		header = recvHead(planificadorSocket); //recibo orden de ejecucion
+
+		// 7. enviar al coordinador la opercion
 		if (parsed.valido) {
 			switch (parsed.keyword) {
 			case GET:
@@ -140,23 +144,34 @@ int main(int argc, char** argv) {
 				fprintf(stderr, "No se pudo interpretar \n");
 				exit(EXIT_FAILURE);
 			}
-
 			destruir_operacion(parsed);
 		} else {
 			fprintf(stderr, "La linea no es valida\n");
 			exit(EXIT_FAILURE);
 		}
 
-		// 7. enviar al coordinador la opercion
-
 		// 8. Recibir resultado por parte del coordinador
 
 		// 9. Transimitir resultado al planificador
+				/*
+				 * if (me bloquee)
+				 * 		continue
+				 */
+		header = recvHead(coordinadorSocket);
+		sendHead(planificadorSocket, header);
+		switch (header.context){
+			case blockedESI:
+				continue;
+			case okESI:
+				break;
+			case abortESI:
+				puts("ESI abortado por orden del coordinador");
+				exit(EXIT_FAILURE);
+			default:
+				puts("ESI abortado. No se reconoce la respuesta del coordinador");
+				exit(EXIT_FAILURE);
+		}
 
-		/*
-		 * if (me bloquee)
-		 * 		continue
-		 */
 		read = getline(&line, &len, fp); // 6. parseo de nuevo
 		parsed = parse(line);
 		numline++;

@@ -16,6 +16,7 @@ typedef enum {
 	ESI,
 	blockedESI,
 	okESI,
+	abortESI,
 
 	INSTANCIA,
 	nombreInstancia,

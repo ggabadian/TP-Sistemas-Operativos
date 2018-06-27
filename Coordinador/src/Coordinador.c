@@ -250,7 +250,8 @@ t_instancia *instanciaRegistrada(char* nombre){
 
 	while(index < list_size(instanciasConectadas)){
 		instancia = list_get(instanciasConectadas, index++);
-		if (!strcmp(nombre, instancia->nombre)) return instancia;
+		if (!strcmp(nombre, instancia->nombre))
+			return instancia;
 	}
 
 	return NULL;
@@ -287,10 +288,12 @@ t_instancia* equitativeLoad(){
 	if (!list_is_empty(instanciasConectadas)){
 		t_instancia *instancia;
 		// Si la instancia anterior que eligio era la ultima, vuelve al principio
-		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
-			indexEquitativeLoad = 0;
+//		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
+//			indexEquitativeLoad = 0;
 
 		do {
+		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
+			indexEquitativeLoad = 0;
 		instancia= list_get(instanciasConectadas, indexEquitativeLoad ++);
 		} while(desconectado(instancia->socket));
 
@@ -331,18 +334,7 @@ t_instancia* keyExplicit(char* clave){
 	double division = cantidadDeLetras/(double)list_size(instanciasConectadas);
 
 	// Distribuye apropiadamente la cantidad de letras segun la cantidad de instancias
-	if(division > 3){
-		letrasPorInstancia = (int)ceil(division); // Redondea siempre para arriba
-	}
-	else if (division > 2 && division < 3){
-		letrasPorInstancia = 3;
-	}
-	else if (division > 1 && division < 2){
-		letrasPorInstancia = 2;
-	}
-	else if (division <= 1){
-		letrasPorInstancia = 1;
-	}
+	letrasPorInstancia = (int)ceil(division); // Redondea siempre para arriba
 
 	// Guarda la primera letra de la clave
 	char* letra = string_substring_until(clave, 1);
