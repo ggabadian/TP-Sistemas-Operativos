@@ -285,12 +285,16 @@ void assignSet(t_set paquete){
 
 t_instancia* equitativeLoad(){
 	if (!list_is_empty(instanciasConectadas)){
+		t_instancia *instancia;
 		// Si la instancia anterior que eligio era la ultima, vuelve al principio
 		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
 			indexEquitativeLoad = 0;
 
-		// Retorna la instancia correspondiente al index y lo incrementa
-		return list_get(instanciasConectadas, indexEquitativeLoad ++);
+		do {
+		instancia= list_get(instanciasConectadas, indexEquitativeLoad ++);
+		} while(desconectado(instancia->socket));
+
+		return instancia;
 	} else {
 		return NULL;
 	}
@@ -309,7 +313,7 @@ t_instancia* leastSpaceUsed(){
 			// Guarda la instancia de ese index y lo incrementa
 			instancia = list_get(instanciasConectadas, index++);
 
-			if (instancia->entradasLibres > instanciaElegida->entradasLibres)
+			if (!desconectado(instancia->socket) && (instancia->entradasLibres > instanciaElegida->entradasLibres))
 				// Guarda la nueva instancia con mayor entradas libres como candidata
 				instanciaElegida = instancia;
 		}
@@ -390,4 +394,8 @@ void sendBlockedESI(int socketESI){
 	header.mSize = 0;
 
 	sendHead(socketESI, header);
+}
+
+bool desconectado (int socket){
+	return (send(socket, 0, 0, 0) == -1);
 }
