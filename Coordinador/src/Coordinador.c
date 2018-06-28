@@ -191,7 +191,7 @@ void* threadInstancia(void* socket) {
 	if (header.context == nombreInstancia){
 		nombreDeInstancia = malloc(header.mSize + 1);
 		recv(socketInstancia, nombreDeInstancia, header.mSize, 0);
-
+		nombreDeInstancia[header.mSize] = '\0';
 		registrarInstancia(socketInstancia, nombreDeInstancia);
 	} else {
 		puts("Error: No se recibió el nombre de la instancia.");
@@ -199,7 +199,7 @@ void* threadInstancia(void* socket) {
 	}
 
 	recvHead(socketInstancia); // Se queda bloqueado hasta que se desconecte
-	printf("Se perdió la conexión con %s.\n.", nombreDeInstancia);
+	printf("Se perdió la conexión con %s.\n", nombreDeInstancia);
 
 	close(socketInstancia);
 	return NULL;
@@ -225,11 +225,11 @@ void sendInitInstancia(int socket) {
 }
 
 void registrarInstancia(int socket, char* nombre){
-	t_instancia *nuevaInstancia = malloc(sizeof(t_instancia)+ strlen(nombre));
 	t_instancia *instancia = instanciaRegistrada(nombre);
 
 	// Si el nombre no estaba registrado
 	if (instancia == NULL){
+		t_instancia *nuevaInstancia = malloc(sizeof(t_instancia)+ strlen(nombre) - sizeof(char*));
 		nuevaInstancia->nombre = nombre;
 		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
@@ -243,7 +243,6 @@ void registrarInstancia(int socket, char* nombre){
 	}
 
 	printf("con socket %d.\n", socket);
-
 	//free(nuevaInstancia); // Hay que liberarla pero aca no es
 }
 
