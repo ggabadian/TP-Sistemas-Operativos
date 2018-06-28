@@ -1,47 +1,54 @@
 // PROTOCOLO DE COMUNICACION
 
-// Los mensajes tienen la estructura: [HEAD:DATO]
+// Los mensajes tienen la forma: [HEAD:DATO]
 
-// HEAD son los primeros bytes que recibe una entidad
-// POR CONVENCION, los HEAD tienen la estructura ABCD donde
-// 		A (1 a 4)		-> 1 es para mensajes que espera el COORDINADOR
-// 						-> 2 para el PLANIFICADOR
-// 						-> 3 para el ESI
-// 						-> 4 para la INSTANCIA
-//     BCD (000 a 999)	-> Cada uno elige que valor darle
-
-// DATO es el mensaje posta y es lo necesario para completar la accion elegida
-// segun el HEAD
+// HEAD es el primer mensaje que se envia/recibe
+// POR CONVENCION, los HEAD son una estructura (t_head) compuesta por:
+// context -> Es de tipo enum (e_context) y se usa para determinar la accion que se va a realizar
+// mSize -> Es un entero que determina la cantidad de bytes de DATO que se deben leer
+//			en el proximo recv()
 
 // Puerto de escucha del Coordinador: 5000
 // Puerto de escucha del Planificador: 5001
 
+// Aclaracion: Donde aparezca "uint32_t", entender como "int"
+
 #include "protocolo.h"
 
-// HEAD sirve para elegir la accion a realizar
-// y para saber cuantos bytes tiene que recibir de DATO
-enum Head {
-	initDataInstancia = 4000,
-	ejemploCoordinador = 1001,
-	otroEjemploESI = 3020,
-};
-
-// Para HANDSHAKE
-char* identificar(char* id) {
-	if (!strcmp(id, COORDINADOR)){
-		return "Coordinador";
-	}
-	else if (!strcmp(id, PLANIFICADOR)) {
-		return "Planificador";
-	}
-	else if (!strcmp(id, ESI)) {
-		return "ESI";
-	}
-	else if (!strcmp(id, INSTANCIA)) {
-		return "Instancia";
-	}
-	else {
-		return "Error";
+// Esto solamente es para el mensaje inicial en HANDSHAKE
+// Ejemplo: "Conectado a Coordinador"
+char* identificar(e_context id) {
+	switch(id){
+		case COORDINADOR:
+			return "Coordinador";
+			break;
+		case PLANIFICADOR:
+			return "Planificador";
+			break;
+		case ESI:
+			return "ESI";
+			break;
+		case INSTANCIA:
+			return "Instancia";
+			break;
+		default:
+			return "Error";
 	}
 }
 
+// Antes de recibir un mensaje se debe recibir el HEAD
+t_head recvHead(int socket){
+	t_head head;
+	if ((recv(socket, &head, sizeof(t_head), 0)) <= 0){
+		head.context = ERROR_HEAD;
+		head.mSize = 0;
+		return head;
+	} else {
+		return head;
+	}
+}
+
+// Antes de enviar un mensaje se debe enviar el HEAD
+void sendHead(int socket, t_head head){
+	send(socket, &head, sizeof(t_head), 0);
+}

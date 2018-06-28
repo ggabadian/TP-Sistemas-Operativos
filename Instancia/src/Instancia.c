@@ -1,14 +1,62 @@
 #include "Instancia.h"
 #include <string.h>
 
-bool conectarCoordinador(){
-	//conecta mediante un socket la instancia con el coordinador
-	puts("Conectando al coordinador");
-/*
-	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
-	send(SOCKET_COORDINADOR, INSTANCIA, 4, 0); // Le avisa que es una INSTANCIA
-*/
-	return true;
+int cantidadEntradasNecesarias(t_set *paqueteSet){
+	double cantidadEntradas = paqueteSet->sizeValor/TAMANIO_ENTRADAS;
+	return (int)ceil(cantidadEntradas);
+}
+
+int posicionEnTabla(char* clave, int *entradasUsadas){
+
+}
+
+void modificarLista(t_set *paqueteSet){
+	datoEntrada *entrada;
+	int cantidadEntradasUsadas;
+	int cantidadEntradas = cantidadEntradasNecesarias(paqueteSet);
+	int posicion = posicionEnTabla(paqueteSet->clave, &cantidadEntradasUsadas);
+	if(posicion != 0){   //esta en la lista
+		entrada = list_get(TABLA_ENTRADAS, posicion);
+
+	}else{   // no esta en la lista
+
+	}
+
+}
+
+void set(t_set *paqueteSet){
+	datoEntrada *entrada;
+	//busco en la tabla a ver si esta
+	modificarLista(paqueteSet);
+
+
+	if (TABLA_ENTRADAS->elements_count <= CANTIDAD_ENTRADAS){
+	/*	uint32_t tamanio = paqueteSet->sizeValor;
+		char* valor = paqueteSet->valor;
+		char* clave = paqueteSet->clave;
+		if(tamanio <= TAMANIO_ENTRADAS){
+			entrada->tamanio;
+			entrada->clave;
+			agregarALista()
+		}
+		agregarALista(entrada);
+		list_add(TABLA_ENTRADAS, );*/
+	}else{//llene la lista
+		if (strcmp(ALGORITMO, "CIRC")){
+
+		}
+		if (strcmp(ALGORITMO, "LRU")){
+
+		}
+		if (strcmp(ALGORITMO, "BSU")){
+
+		}
+
+	}
+
+}
+void store(t_store *paqueteStore){
+
 }
 
 bool enviarACoordinador(char* msg){
@@ -21,95 +69,53 @@ bool enviarACoordinador(char* msg){
 	return false;
 }
 
-bool recibirDeCoordinador(char* accion, char* dato){
-	//debe recibir accion y dato por referencia
-	// se encarga de cargar estos mediante la lectura del socket
-	char* encabezado;
-	int largo;
+bool conectarCoordinador(){
+	t_head header;
+	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
 
-	//lectura del header
-	int nRecibidos = recv(SOCKET_COORDINADOR, encabezado, 10, MSG_WAITALL);
-	if (nRecibidos == 10){
-		accion = string_substring(encabezado, 0, 4);      //4 primero bytes para identificar la accion
-		largo = (int) string_substring(encabezado, 4, 6); //6 siguientes bytes para el tamaño del dato a leer
+	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR,PUERTO_COORDINADOR);
 
-		//lectura del dato
-		nRecibidos = recv(SOCKET_COORDINADOR, dato, largo, MSG_WAITALL);
-		if(nRecibidos == largo){
-			return true;
-		}else{
-			return false;
-		}
-	}else{
-		return false;
+	// Le avisa que es una INSTANCIA
+	header.context = INSTANCIA;
+	header.mSize = 0;
+	sendHead(SOCKET_COORDINADOR, header);
+
+	// Le envía su nombre
+	header.context = nombreInstancia;
+	header.mSize = strlen(NOMBRE);
+	sendHead(SOCKET_COORDINADOR, header);
+	enviarACoordinador(NOMBRE);
+
+	return true;
+}
+
+bool recibirDeCoordinador(){
+	t_head header = recvHead(SOCKET_COORDINADOR);
+	t_set *paqueteSet= malloc(sizeof(t_set));
+	t_store *paqueteStore= malloc(sizeof(t_store));
+	t_initInstancia *paqueteInit= malloc(sizeof(t_initInstancia));
+
+	switch(header.context){
+	case INIT_INSTANCIA:
+		recv(SOCKET_COORDINADOR, paqueteInit, header.mSize,0);
+		CANTIDAD_ENTRADAS = paqueteInit->cantidadEntradas;
+		TAMANIO_ENTRADAS = paqueteInit->sizeofEntrada;
+		TABLA_ENTRADAS = list_create();
+	break;
+	case ACT_SET:
+		recv(SOCKET_COORDINADOR,&paqueteSet,header.mSize,0);
+		set(paqueteSet);
+
+	break;
+	case ACT_STORE:
+		recv(SOCKET_COORDINADOR,&paqueteStore,header.mSize,0);
+		store(paqueteStore);
+	break;
+	default:
+		//procesa error
+	break;
 	}
-}
-
-bool recibirDeCoordinadorCargaInicial(int *cantidadEntradas,int *tamanioEntradas){
-	//aca llamaria a recibir coordinador posta que es el que se comunica
-	char* accion = "4000";
-	char* dato = "CIRC|/home/utnso/instancia1|instancia1|10|10|40";
-	//dato: algoritmo|punto de montaje|id instancia| intervalo de dump| cantidad de entradas|tamaño de entrada
-	char** datos;
-	if(accion == "4000"){
-		datos = string_split(dato, "|");
-		ALGORITMO         = datos[0];
-		PUNTO_MONTAJE     = datos[1];
-		NOMBRE            = datos[2];
-		INTERVALO_DUMP    = atoi (datos[3]);
-		*cantidadEntradas = atoi (datos[4]);
-		*tamanioEntradas  = atoi (datos[5]);
-	}
-	printf("-Algoritmo: %s "             , ALGORITMO     );
-	printf("-Punto de montaje: %s \n"    , PUNTO_MONTAJE );
-	printf("-Nombre: %s \n"              , NOMBRE        );
-	printf("-Intervalo de dump: %d \n"   , INTERVALO_DUMP);
-	printf("-Cantidad de entradas: %d \n", *cantidadEntradas);
-	printf("-Tamaño de entradas: %d \n"  , *tamanioEntradas);
 	return true;
-}
-
-bool cargaInicial(){
-	//obitiene todos los parametros necesarios para su configuracion,
-	//por parte del coordinador
-	int cantidadEntradas;
-	int tamanioEntradas;
-	puts("Realizando carga inicial. Se cargan todas las configuraciones y tablas");
-
-	recibirDeCoordinadorCargaInicial(&cantidadEntradas, &tamanioEntradas);
-
-	printf("-Cantidad de entradas: %d \n", cantidadEntradas);
-	printf("-Tamaño de entradas: %d \n"  , tamanioEntradas);
-
-	t_list *listaDeEntradas = list_create();
-
-
-
-	/*char* memoria = (char *)calloc(cantidadEntradas, tamanioEntradas);
-
-	if (*memoria == NULL){
-		printf("No se puedo asignar");
-	}else{
-		char* unaPalabra = string_new();
-		char* otraPalabra = string_new();
-		string_append(&unaPalabra, "Primer elemento");
-		string_append(&otraPalabra, "Segunto elemento");
-		strcpy(*memoria,*unaPalabra);
-		strcpy(*memoria+1,*otraPalabra);
-	}*/
-	return true;
-}
-
-bool hayNuevaSentencia(){
-	//recibe del coordinador una sentencia nueva
-	puts("Recibiendo nueva sentencia");
-	return true;
-}
-
-void procesarSentencia(){
-	//interpreta el mensaje del coordinador, y realiza la accion correspondiente
-	puts("Procesando sentencia");
-	sleep(1);
 }
 
 void respuesta(){
@@ -137,8 +143,13 @@ void finDumping(){
 
 }
 
-int main(void) {
-	cargarConfig();
+int main(int argc, char* argv[]) {
+
+	//creo el logger
+	LOG_INSTANCIA = log_create("../log/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
+	//se usa para escribir en el archivo de log y lo muestra por pantalla
+	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
+	cargarConfig(argv[1]);
 
 	int estado;
 	/* 0: No Conectada
@@ -161,26 +172,11 @@ int main(void) {
 		break;
 
 		case 1:
-			puts("Conectada, procedera a realizar la cargaInicial");
-			if (cargaInicial()){
+			puts("Disponible, esperando que el coordinador envie una sentencia");
+			if (recibirDeCoordinador()){
 				estado = 2;
 			}
 		break;
-
-		case 2:
-			puts("Disponible, esperando que el coordinador envie una sentencia");
-			if (hayNuevaSentencia()){
-				estado = 3;
-			}
-		break;
-
-		case 3:
-			puts("Procesando sentencia, se interpretara la operacion a realizar y se realizara");
-			procesarSentencia();
-			estado=2;
-		break;
-
-		case 4:
 			puts("Compactando, se compactaran los datos");
 		break;
 
@@ -190,6 +186,6 @@ int main(void) {
 		}
 		sleep(3);
 	}
-
+	log_destroy(LOG_INSTANCIA);
 	return EXIT_SUCCESS;
 }

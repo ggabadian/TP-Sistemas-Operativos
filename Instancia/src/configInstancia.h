@@ -14,6 +14,7 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/collections/list.h>
+#include <math.h>
 
 // Campos de instancia.config
 char *IP_COORDINADOR;
