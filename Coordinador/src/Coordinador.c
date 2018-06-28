@@ -137,9 +137,9 @@ void* threadESI(void* socket) {
 
 				// Recibir respuesta del planificador
 				// Si puede, entonces:
-					//informar que puede
+					sendOkESI(socketESI);
 				// si no:
-					sendBlockedESI(socketESI);
+					//sendBlockedESI(socketESI);
 				//(Pendiente) log operacion
 				break;
 			case ACT_SET:
@@ -148,6 +148,8 @@ void* threadESI(void* socket) {
 
 				sendHead(socketPlanificador, header);
 				send(socketPlanificador, &paqueteSet, sizeof(paqueteSet), 0);
+
+				sendOkESI(socketESI);
 
 				assignSet(paqueteSet);
 				//(Pendiente) log operacion
@@ -160,7 +162,11 @@ void* threadESI(void* socket) {
 				send(socketPlanificador, &paqueteStore, sizeof(paqueteStore), 0);
 
 				//assignStore(header, paqueteStore.clave);
+
+				sendOkESI(socketESI);
+
 				//(Pendiente) log operacion
+
 				break;
 			case ERROR_HEAD:
 				printf("Se perdió la conexión con el ESI %d.\n", idESI);
@@ -176,14 +182,14 @@ void* threadESI(void* socket) {
 
 void* threadInstancia(void* socket) {
 	int socketInstancia = *(int*)socket;
-	int compact = 1;
 	t_head header;
+	char* nombreDeInstancia;
 
 	sendInitInstancia(socketInstancia);
 
 	header = recvHead(socketInstancia);
 	if (header.context == nombreInstancia){
-		char* nombreDeInstancia = malloc(header.mSize + 1);
+		nombreDeInstancia = malloc(header.mSize + 1);
 		recv(socketInstancia, nombreDeInstancia, header.mSize, 0);
 
 		registrarInstancia(socketInstancia, nombreDeInstancia);
@@ -192,11 +198,8 @@ void* threadInstancia(void* socket) {
 		return NULL;
 	}
 
-	while (compact) {
-		//compactar();
-
-		//compact = 0;
-	}
+	recvHead(socketInstancia); // Se queda bloqueado hasta que se desconecte
+	printf("Se perdió la conexión con %s.\n.", nombreDeInstancia);
 
 	close(socketInstancia);
 	return NULL;
@@ -291,7 +294,7 @@ t_instancia* equitativeLoad(){
 //		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
 //			indexEquitativeLoad = 0;
 
-		do {
+		do { // (Pendiente) BUG - Rompe si todas las de la lista estan desconectadas
 		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
 			indexEquitativeLoad = 0;
 		instancia= list_get(instanciasConectadas, indexEquitativeLoad ++);
@@ -310,7 +313,9 @@ t_instancia* leastSpaceUsed(){
 		t_instancia *instanciaElegida;
 		int index = 0;
 
+		do { // (Pendiente) BUG - Rompe si todas las de la lista estan desconectadas
 		instanciaElegida = list_get(instanciasConectadas, index++);
+		} while(desconectado(instanciaElegida->socket));
 
 		while(index < list_size(instanciasConectadas)){
 			// Guarda la instancia de ese index y lo incrementa
@@ -383,6 +388,15 @@ void sendBlockedESI(int socketESI){
 	t_head header;
 
 	header.context = blockedESI;
+	header.mSize = 0;
+
+	sendHead(socketESI, header);
+}
+
+void sendOkESI(int socketESI){
+	t_head header;
+
+	header.context = okESI;
 	header.mSize = 0;
 
 	sendHead(socketESI, header);
