@@ -83,31 +83,35 @@ void consola() {
 }
 
 int main() {
-	t_log* logPlanificador;//puede que haya que ponerla global si se usa en alguna funcion
+	t_log* logPlanificador;		//puede que haya que ponerla global si se usa en alguna funcion
 	//creo el logger
-	logPlanificador = log_create("../log/logDePlanificador.log", "Planificador", true, LOG_LEVEL_TRACE);
+	logPlanificador = log_create("/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/Planificador/log/logDePlanificador.log", "Planificador", true, LOG_LEVEL_TRACE);
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	log_trace(logPlanificador, "Iniciando Planificador");
-	cargarConfigPlanificador();
 
+	cargarConfigPlanificador(); 	// Cargo la configuración del Planificador desde el archivo config
+
+	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
 	bloqueados = list_create();
 	finalizados = list_create();
 	clBloqueadas = list_create();
 
+	t_ESI *proximoESI;
+
 	t_head header;
 	header.context = PLANIFICADOR;
 	header.mSize = 0;
 
-//	printf("PUERTO= %s\n", PUERTO);
-//	printf("ALGORITMO= %s\n", ALGORITMO);
-//	printf("ALFA= %d\n", ALFA);
-//	printf("ESTIMACION= %d\n", ESTIMACION_I);
-//	printf("IP COORDINADOR= %s\n", IP_COORDINADOR);
-//	printf("PUERTO COORDINADOR= %d\n", PUERTO_COORDINADOR);
-//	printf("CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
+	printf("PUERTO= %s\n", PUERTO);
+	printf("ALGORITMO= %s\n", ALGORITMO);
+	printf("ALFA= %d\n", ALFA);
+	printf("ESTIMACION= %d\n", ESTIMACION_I);
+	printf("IP COORDINADOR= %s\n", IP_COORDINADOR);
+	printf("PUERTO COORDINADOR= %s\n", PUERTO_COORDINADOR);
+	printf("CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
 
-	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);
+	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);		//Envío solicitud de conexión al Coordinador
 	printf("Conectado a Coordinador. \n");
 	sendHead(coordinadorSocket, header); // Le avisa que es el planificador
 
@@ -175,6 +179,7 @@ int main() {
 					if (socketCliente > fdmax) {	// keep track of the max
 						fdmax = socketCliente;
 					}
+
 				} else if (i == coordinadorSocket) { // El coordinador me quiere decir algo
 					t_head header = recvHead(i);
 					if (header.context == ERROR_HEAD) {
@@ -188,7 +193,8 @@ int main() {
 							printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, paqueteGet.idESI);
 							// verificar si la solicitud es valida
 							// mandar por si o por no
-							break;
+							break;						// we got some data from the coordinador
+
 						case ACT_SET:
 							recv(i, &paqueteSet, header.mSize, 0);
 							printf("Se recibió un SET <%s> <%s> del ESI %d\n",paqueteSet.clave, paqueteSet.valor, paqueteSet.idESI);
@@ -227,6 +233,9 @@ int main() {
 				}
 			} // END got new incoming connection
 		} // END looping through file descriptors
+		estimar();
+		proximoESI = planificar();
+
 	} // END for(;;)--and you thought it would never end!
 
 	close(listeningSocket);
@@ -235,6 +244,7 @@ int main() {
 
 	return 0;
 }
+
 
 
 //************* FUNCIONES *******************
@@ -248,6 +258,70 @@ void agregarESIAColaDeListos(int socketESI, int id) {
 	nuevoESI->estSigRaf = ESTIMACION_I;
 
 	list_add(listos, nuevoESI);
+}
+
+//-------------------------------------------------
+t_ESI *planificar() {
+	t_ESI *esi;
+	estimar();
+
+	if (!strcmp(ALGORITMO, "SJF-SD")) {
+			esi = sjfsd();
+		}
+//		else if (!strcmp(ALGORITMO, "SJF-CD")) {
+//			esi = sjfcd();
+//		}
+//		else if (!strcmp(ALGORITMO, "HRRN")) {
+//			esi = hrrn();
+//		}
+		else {
+			puts("Error: No se pudo determinar el algoritmo de planificación");
+			return NULL;
+		}
+	return esi;
+
+//		if(esi != NULL){
+//			//Para testear
+//			printf("(Testing) Socket de la instancia elegida: %d\n", instancia->socket);
+//			printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
+//			sendSet(instancia, paquete);
+//		} else {
+//			puts("Error: No hay ninguna instancia para recibir la solicitud.");
+//		}
+}
+
+void estimar() {
+	int i;
+	int cantEsisListos = list_size(listos);
+	t_ESI *aux;
+	for (i=0; i < cantEsisListos; i++){
+		aux = list_get(listos, i);
+		aux->estSigRaf = (ALFA/100)*(aux->tn)+((1-(ALFA/100))*aux->estAntRaf);
+	}
+}
+
+t_ESI *sjfsd() {
+	if (!list_is_empty(listos)){
+			t_ESI *esi;
+			t_ESI *esiElegido;
+			int index = 0;
+
+
+			esiElegido = list_get(listos, index++);
+
+
+			while(index < list_size(listos)){
+				// Guarda la instancia de ese index y lo incrementa
+				esi = list_get(listos, index++);
+
+				if (esi->estSigRaf < esiElegido->estSigRaf)
+					// Guarda la nueva instancia con mayor entradas libres como candidata
+					esiElegido = esi;
+			}
+			return esiElegido;
+		} else {
+			return NULL;
+		}
 }
 
 //int main(void) {

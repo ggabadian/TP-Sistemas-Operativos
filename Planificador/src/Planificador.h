@@ -36,6 +36,10 @@ typedef struct {
 
 void consola();
 void agregarESIAColaDeListos(int, int);
+t_ESI *planificar ();
+t_ESI *sjfsd();
+void estimar();
+
 
 
 
