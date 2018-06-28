@@ -2,7 +2,8 @@
 
 #include "socketClient.h"
 
-int connectSocket(char *ip, char *puerto){
+int connectToServer(char *ip, char *puerto){
+
 	struct addrinfo hints;
 	struct addrinfo *serverInfo;
 
@@ -12,11 +13,25 @@ int connectSocket(char *ip, char *puerto){
 
 	getaddrinfo(ip, puerto, &hints, &serverInfo);
 
-	int serverSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype,serverInfo->ai_protocol);
+	int newSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype,serverInfo->ai_protocol);
 
-	connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	if ((connect(newSocket, serverInfo->ai_addr, serverInfo->ai_addrlen)) < 0){
+		freeaddrinfo(serverInfo);
+		return -1; // No se pudo conectar
+	}
 
 	freeaddrinfo(serverInfo);
+
+	return newSocket;
+}
+
+int connectSocket(char *ip, char *puerto){
+	int serverSocket = connectToServer(ip, puerto);
+
+	while (serverSocket < 0){ // Si no se pudo conectar, vuelve a intentarlo
+		sleep(1);
+		serverSocket = connectToServer(ip, puerto);
+	}
 
 	return serverSocket;
 }
