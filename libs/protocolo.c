@@ -52,3 +52,49 @@ t_head recvHead(int socket){
 void sendHead(int socket, t_head head){
 	send(socket, &head, sizeof(t_head), 0);
 }
+
+int recvSet(t_set *paqueteSet, int socket){
+	int status;
+
+	status = recv(socket, paqueteSet->clave, sizeof(paqueteSet->clave), 0);
+	if (!status) return 0;
+
+	status = recv(socket, &(paqueteSet->sizeValor), sizeof(paqueteSet->sizeValor), 0);
+	if (!status) return 0;
+
+	status = recv(socket, paqueteSet->valor, paqueteSet->sizeValor, 0);
+	if (!status) return 0;
+
+	status = recv(socket, &(paqueteSet->idESI), sizeof(paqueteSet->idESI), 0);
+	if (!status) return 0;
+
+	return status;
+
+}
+
+void sendSetPack(t_set *paqueteSet, int socket){
+	int packageSize = sizeof(paqueteSet->clave) + sizeof(paqueteSet->idESI) + sizeof(paqueteSet->sizeValor) + paqueteSet->sizeValor;
+	char *serializedPackage = malloc(packageSize);
+	int offset = 0;
+	int sizeToSend;
+
+	sizeToSend = sizeof(paqueteSet->clave);
+	memcpy(serializedPackage + offset, &(paqueteSet->clave), sizeToSend);
+	offset += sizeToSend;
+
+	sizeToSend = sizeof(paqueteSet->sizeValor);
+	memcpy(serializedPackage + offset, &(paqueteSet->sizeValor), sizeToSend);
+	offset += sizeToSend;
+
+	sizeToSend = paqueteSet->sizeValor;
+	memcpy(serializedPackage + offset, paqueteSet->valor, sizeToSend);
+	offset += sizeToSend;
+
+	sizeToSend = sizeof(paqueteSet->idESI);
+	memcpy(serializedPackage + offset, &(paqueteSet->idESI), sizeToSend);
+
+	send(socket, serializedPackage, packageSize, 0);
+
+	free(serializedPackage);
+
+}

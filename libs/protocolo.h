@@ -4,6 +4,8 @@
 
 #include <sys/socket.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 // -------- Contexto --------
 typedef enum {
@@ -46,14 +48,14 @@ typedef struct {
 } __attribute__((packed)) t_get;
 
 typedef struct {
-	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
-	uint32_t sizeValor; // <---ESTO SE VA A BORRAR, AGREGAR "/0" AL FINAL
-	char valor[255]; // Limitamos los caracteres para usar serializacion estatica
+	char clave[40];
+	uint32_t sizeValor;
+	char valor[255]; // (Pendiente) Cambiar
 	uint32_t idESI;
 } __attribute__((packed)) t_set;
 
 typedef struct {
-	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
+	char clave[40];
 	uint32_t idESI;
 } __attribute__((packed)) t_store;
 
