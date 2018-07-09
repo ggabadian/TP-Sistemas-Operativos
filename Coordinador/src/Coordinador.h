@@ -26,6 +26,8 @@ int socketPlanificador = 0;
 // Esto registra el indice de la ultima instancia elegida
 int indexEquitativeLoad = 0;
 
+t_log* logCoordinador;
+t_log* logDeOperaciones;
 
 typedef struct {
 	char* nombre;

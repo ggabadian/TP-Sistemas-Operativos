@@ -1,27 +1,25 @@
 #include "Coordinador.h"
 
-//esta funcion tira un warning que queda para corregir
-
 int main(void) {
-	t_log* logCoordinador;//puede que haya que ponerla global si se usa en alguna funcion
 	//creo el logger
-	logCoordinador = log_create("../log/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
-	//se usa para escribir en el archivo de log y lo muestra por pantalla
+	logCoordinador = log_create("../log/logCoordinador.log", "Coordinador", true, LOG_LEVEL_TRACE);
+	logDeOperaciones = log_create("../log/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
 	log_trace(logCoordinador, "Iniciando Coordinador");
+
 	cargarConfig();
-	puts("Configuración inicial realizada.");
+	log_info(logCoordinador, "Configuración inicial realizada.");
 
 	if (!strcmp(ALGORITMO, "EL")) {
-		puts("Se utilizará el algoritmo de distribución Equitative Load.");
+		log_info(logCoordinador, "(ALGORITMO) Equitative Load.");
 	}
 	else if (!strcmp(ALGORITMO, "LSU")) {
-		puts("Se utilizará el algoritmo de distribución Least Space Used.");
+		log_info(logCoordinador, "(ALGORITMO) Least Space Used.");
 	}
 	else if (!strcmp(ALGORITMO, "KE")) {
-		puts("Se utilizará el algoritmo de distribución Key Explicit.");
+		log_info(logCoordinador, "(ALGORITMO) Key Explicit.");
 	}
 	else {
-		puts("Error: No se pudo determinar el algoritmo de distribución.");
+		log_error(logCoordinador, "(ALGORITMO) No se pudo cargar.");
 		return ERROR;
 	}
 
@@ -40,10 +38,9 @@ int main(void) {
 
 		identificador = recvHead(socketCliente);
 		if (identificador.context == ERROR_HEAD) {
-			puts("Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
-			//(Pendiente) log error
+			log_error(logCoordinador, "(HANDSHAKE) No se pudo identificar a la entidad. Conexión desconocida.\n");
 		} else {
-			printf("Conectado a %s.\n", identificar(identificador.context));
+			log_info(logCoordinador, "Conectado a %s.", identificar(identificador.context));
 		}
 
 		if (identificador.context == PLANIFICADOR){
@@ -59,8 +56,6 @@ int main(void) {
 
 //(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
 //(Pendiente) Semaforos para el manejo de la lista de instancias conectadas
-//(Pendiente) BUG - Si se abre una instancia mientras se esta ejecutando un ESI
-//					se rompe la conexion ESI-Coordinador
 
 void crearThread(e_context id, int socket) {
 	pthread_t thread;
@@ -72,29 +67,25 @@ void crearThread(e_context id, int socket) {
 	case PLANIFICADOR:
 		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador, &socket);
 		if (statusPlanificador) {
-			puts("Error en la creación de thread para Planificador");
-			//(Pendiente) log error
+			log_error(logCoordinador, "No se pudo crear el thread para Planificador");
 		}
 		break;
 	case ESI:
 		statusESI = pthread_create(&thread, NULL, &threadESI, &socket);
 
 		if (statusESI) {
-			puts("Error en la creación de thread para ESI");
-			//(Pendiente) log error
+			log_error(logCoordinador, "No se pudo crear el thread para ESI");
 		}
 		break;
 	case INSTANCIA:
 		statusInstancia = pthread_create(&thread, NULL, &threadInstancia, &socket);
 		if (statusInstancia) {
-			puts("Error en la creación de thread para Instancia");
-			//(Pendiente) log error
+			log_error(logCoordinador, "No se pudo crear el thread para Instancia");
 		}
 
 		break;
 	default:
-		puts("Error al crear thread: La conexión es desconocida");
-		//(Pendiente) log error
+		log_error(logCoordinador, "No se pudo crear thread: La conexión es desconocida");
 	}
 }
 
@@ -116,7 +107,7 @@ void* threadESI(void* socket) {
 	int connected = 1;
 	int idESI;
 	if(recv(socketESI, &idESI, sizeof(int), 0) <= 0){
-		puts("Error al recibir id del ESI");
+		log_error(logCoordinador, "(ESI) No se recibió su id.");
 		return NULL;
 	}
 
@@ -130,50 +121,54 @@ void* threadESI(void* socket) {
 		switch(header.context){
 			case ACT_GET:
 				recv(socketESI, &paqueteGet, header.mSize, 0);
-				printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, idESI);
-				// Consultar al planificador
+				log_trace(logDeOperaciones, "(ESI %d) GET <%s>", idESI, paqueteGet.clave);
+				// Consulta al planificador
 				sendHead(socketPlanificador, header);
 				send(socketPlanificador, &paqueteGet, sizeof(paqueteGet), 0);
 
-				// Recibir respuesta del planificador
+				// Recibe respuesta del planificador
+				// recv()
 				// Si puede, entonces:
 					sendOkESI(socketESI);
 				// si no:
 					//sendBlockedESI(socketESI);
-				//(Pendiente) log operacion
 				break;
 			case ACT_SET:
 				recv(socketESI, &paqueteSet, header.mSize, 0);
-				printf("Se recibió un SET <%s> <%s> del ESI %d\n", paqueteSet.clave, paqueteSet.valor, idESI);
-
+				log_trace(logDeOperaciones, "(ESI %d) SET <%s> <%s>", idESI, paqueteSet.clave, paqueteSet.valor);
+				// Consulta al planificador
 				sendHead(socketPlanificador, header);
 				send(socketPlanificador, &paqueteSet, sizeof(paqueteSet), 0);
 
-				sendOkESI(socketESI);
-
-				assignSet(paqueteSet);
-				//(Pendiente) log operacion
+				// Recibe respuesta del planificador
+				// recv()
+				// Si puede, entonces:
+					sendOkESI(socketESI);
+					assignSet(paqueteSet);
+				// si no:
+					//sendBlockedESI(socketESI);
 				break;
 			case ACT_STORE:
 				recv(socketESI, &paqueteStore, header.mSize, 0);
-				printf("Se recibió un STORE <%s> del ESI %d\n", paqueteStore.clave, idESI);
-
+				log_trace(logDeOperaciones, "(ESI %d) STORE <%s>", idESI, paqueteStore.clave);
+				// Consulta al planificador
 				sendHead(socketPlanificador, header);
 				send(socketPlanificador, &paqueteStore, sizeof(paqueteStore), 0);
 
-				//assignStore(header, paqueteStore.clave);
-
-				sendOkESI(socketESI);
-
-				//(Pendiente) log operacion
-
+				// Recibe respuesta del planificador
+				// recv()
+				// Si puede, entonces:
+					sendOkESI(socketESI);
+					//assignStore(header, paqueteStore.clave);
+				// si no:
+					//sendBlockedESI(socketESI);
 				break;
 			case ERROR_HEAD:
-				printf("Se perdió la conexión con el ESI %d.\n", idESI);
+				log_info(logCoordinador, "(ESI %d) Se perdió la conexión.", idESI);
 				connected = 0;
 				break;
 			default:
-				printf("La solicitud del ESI %d es inválida.\n", idESI);
+				log_error(logDeOperaciones, "(ESI %d) Operación inválida", idESI);
 		}
 	}
 
@@ -194,12 +189,12 @@ void* threadInstancia(void* socket) {
 		nombreDeInstancia[header.mSize] = '\0';
 		registrarInstancia(socketInstancia, nombreDeInstancia);
 	} else {
-		puts("Error: No se recibió el nombre de la instancia.");
+		log_error(logCoordinador, "(INSTANCIA) No se recibió el nombre");
 		return NULL;
 	}
 
 	recvHead(socketInstancia); // Se queda bloqueado hasta que se desconecte
-	printf("Se perdió la conexión con %s.\n", nombreDeInstancia);
+	log_info(logCoordinador, "(%s) Se perdió la conexión.", nombreDeInstancia);
 
 	close(socketInstancia);
 	return NULL;
@@ -220,8 +215,6 @@ void sendInitInstancia(int socket) {
 
 	//Envia el paquete
 	send(socket, &paquete, sizeof(paquete), 0);
-
-	puts("Configuración inicial enviada a Instancia.");
 }
 
 void registrarInstancia(int socket, char* nombre){
@@ -235,14 +228,11 @@ void registrarInstancia(int socket, char* nombre){
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
 
 		list_add(instanciasConectadas,nuevaInstancia);
-		printf("Instancia registrada: <%s> ", nuevaInstancia->nombre);
 	} else {
 		// Actualiza el socket
 		instancia->socket = socket;
-		printf("La instancia <%s> se reincorporó al sistema ", instancia->nombre);
+		log_info(logCoordinador, "(%s) Se reincorporó.", instancia->nombre);
 	}
-
-	printf("con socket %d.\n", socket);
 	//free(nuevaInstancia); // Hay que liberarla pero aca no es
 }
 
@@ -272,7 +262,7 @@ void assignSet(t_set paquete){
 		instancia = keyExplicit(paquete.clave);
 	}
 	else {
-		puts("Error: No se pudo determinar el algoritmo de distribución");
+		log_error(logCoordinador, "(SET) No se pudo determinar el algoritmo de distribución");
 		return;
 	}
 
@@ -282,7 +272,7 @@ void assignSet(t_set paquete){
 		printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
 		sendSet(instancia, paquete);
 	} else {
-		puts("Error: No hay ninguna instancia para recibir la solicitud.");
+		log_error(logCoordinador, "(SET) No hay ninguna instancia para recibir la solicitud.");
 	}
 }
 
