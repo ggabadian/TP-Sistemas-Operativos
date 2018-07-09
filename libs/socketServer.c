@@ -16,6 +16,10 @@ int listenSocket(char *puerto) {
 
 	int newSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
+	// Esto es para no tener que esperar a que se cierre el socket en los tests
+	int activado = 1;
+	setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, &activado, sizeof(activado));
+
 	bind(newSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
 
 	freeaddrinfo(serverInfo);

@@ -365,12 +365,9 @@ void sendSet(t_instancia *instancia, t_set paquete){
 
 void assignStore(t_head header, char* clave){ //(Pendiente)
 /*	t_instancia *instancia;
-
 	//(Pendiente) Analizar a que instancia se va a enviar
-
 	//Para testear la asigno con EL
 	//instancia = equitativeLoad(instanciasConectadas);
-
 	if(instancia != NULL){
 		sendStore(instancia, header, clave);
 	} else {
