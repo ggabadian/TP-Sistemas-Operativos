@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
 	memset(&paqueteGet, 0, sizeof(t_get)); //Inicializa toda la estrucutra
 
 	t_set paqueteSet;
-	memset(&paqueteSet, 0, sizeof(t_set)); //Inicializa toda la estrucutra
+	//memset(&paqueteSet, 0, sizeof(t_set)); //Inicializa toda la estrucutra
 
 	t_store paqueteStore;
 	memset(&paqueteStore, 0, sizeof(t_store)); //Inicializa toda la estrucutra
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 				break;
 			case SET:
 				header.context = OPERACION_SET;
-				header.mSize = sizeof(paqueteSet);
+				header.mSize = 0;
 
 				if (strlen(parsed.argumentos.SET.clave) <= 40){ // Maximo permitido por consigna
 					strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
@@ -108,21 +108,17 @@ int main(int argc, char** argv) {
 					break;
 				}
 
-				paqueteSet.sizeValor = sizeof(parsed.argumentos.SET.valor);
+				paqueteSet.sizeValor = strlen(parsed.argumentos.SET.valor) + 1;
 
-				if (strlen(parsed.argumentos.SET.valor) < 255){
-					strcpy(paqueteSet.valor, parsed.argumentos.SET.valor);
-				} else {
-					printf("Error en SET: El valor en la línea %d es demasiado grande.\n", numline);
-					break;
-				}
-
-				strcpy(paqueteSet.valor, parsed.argumentos.SET.valor);
+				paqueteSet.valor = malloc(paqueteSet.sizeValor);
+				strncpy(paqueteSet.valor, parsed.argumentos.SET.valor, strlen(parsed.argumentos.SET.valor));
+				(paqueteSet.valor)[strlen(parsed.argumentos.SET.valor)] = '\0';
 
 				paqueteSet.idESI = id;
 
 				sendHead(coordinadorSocket, header);
-				send(coordinadorSocket, &paqueteSet, sizeof(paqueteSet), 0);
+				sendSet(coordinadorSocket, &paqueteSet);
+				free(paqueteSet.valor);
 				break;
 			case STORE:
 				header.context = OPERACION_STORE;

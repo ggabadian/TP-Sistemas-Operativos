@@ -134,17 +134,17 @@ void* threadESI(void* socket) {
 					//sendBlockedESI(socketESI);
 				break;
 			case OPERACION_SET:
-				recv(socketESI, &paqueteSet, header.mSize, 0);
+				recvSet(socketESI, &paqueteSet);
 				log_trace(logDeOperaciones, "(ESI %d) SET <%s> <%s>", idESI, paqueteSet.clave, paqueteSet.valor);
 				// Consulta al planificador
 				sendHead(socketPlanificador, header);
-				send(socketPlanificador, &paqueteSet, sizeof(paqueteSet), 0);
+				sendSet(socketPlanificador, &paqueteSet);
 
 				// Recibe respuesta del planificador
 				// recv()
 				// Si puede, entonces:
 					sendOkESI(socketESI);
-					assignSet(paqueteSet);
+					distribuirSet(paqueteSet);
 				// si no:
 					//sendBlockedESI(socketESI);
 				break;
@@ -159,7 +159,7 @@ void* threadESI(void* socket) {
 				// recv()
 				// Si puede, entonces:
 					sendOkESI(socketESI);
-					//assignStore(header, paqueteStore.clave);
+					//distribuirStore(header, paqueteStore.clave);
 				// si no:
 					//sendBlockedESI(socketESI);
 				break;
@@ -249,7 +249,7 @@ t_instancia *instanciaRegistrada(char* nombre){
 	return NULL;
 }
 
-void assignSet(t_set paquete){
+void distribuirSet(t_set paquete){
 	t_instancia *instancia;
 
 	if (!strcmp(ALGORITMO, "EL")) {
@@ -270,9 +270,10 @@ void assignSet(t_set paquete){
 		//Para testear
 		printf("(Testing) Socket de la instancia elegida: %d\n", instancia->socket);
 		printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
-		sendSet(instancia, paquete);
+		enviarSet(instancia, paquete);
 	} else {
 		log_error(logCoordinador, "(SET) No hay ninguna instancia para recibir la solicitud.");
+		free(paquete.valor);
 	}
 }
 
@@ -342,7 +343,7 @@ t_instancia* keyExplicit(char* clave){
 	return list_get(instanciasConectadas, indexInstancia);
 }
 
-void sendSet(t_instancia *instancia, t_set paquete){
+void enviarSet(t_instancia *instancia, t_set paquete){
 	t_head header;
 	header.context = OPERACION_SET;
 	header.mSize = sizeof(paquete);
@@ -351,21 +352,23 @@ void sendSet(t_instancia *instancia, t_set paquete){
 	send(instancia->socket, &paquete, sizeof(paquete), 0);
 
 	instancia->entradasLibres--; //(Pendiente) Guardar clave
+
+	free(paquete.valor);
 }
 
-void assignStore(t_head header, char* clave){ //(Pendiente)
+void distribuirStore(t_head header, char* clave){ //(Pendiente)
 /*	t_instancia *instancia;
 	//(Pendiente) Analizar a que instancia se va a enviar
 	//Para testear la asigno con EL
 	//instancia = equitativeLoad(instanciasConectadas);
 	if(instancia != NULL){
-		sendStore(instancia, header, clave);
+		enviarStore(instancia, header, clave);
 	} else {
 		puts("Error: No hay ninguna instancia para recibir la solicitud.");
 	}*/
 }
 
-void sendStore(t_instancia *instancia, t_head header, char* clave){
+void enviarStore(t_instancia *instancia, t_head header, char* clave){
 	sendHead(instancia->socket, header);
 	send(instancia->socket, clave, header.mSize, 0);
 }

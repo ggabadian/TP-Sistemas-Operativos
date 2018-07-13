@@ -53,7 +53,7 @@ void sendHead(int socket, t_head head){
 	send(socket, &head, sizeof(t_head), 0);
 }
 
-int recvSet(t_set *paqueteSet, int socket){
+int recvSet(int socket, t_set *paqueteSet){
 	int status;
 
 	status = recv(socket, paqueteSet->clave, sizeof(paqueteSet->clave), 0);
@@ -62,6 +62,7 @@ int recvSet(t_set *paqueteSet, int socket){
 	status = recv(socket, &(paqueteSet->sizeValor), sizeof(paqueteSet->sizeValor), 0);
 	if (!status) return 0;
 
+	paqueteSet->valor = malloc(paqueteSet->sizeValor);
 	status = recv(socket, paqueteSet->valor, paqueteSet->sizeValor, 0);
 	if (!status) return 0;
 
@@ -72,7 +73,7 @@ int recvSet(t_set *paqueteSet, int socket){
 
 }
 
-void sendSetPack(t_set *paqueteSet, int socket){
+void sendSet(int socket, t_set *paqueteSet){
 	int packageSize = sizeof(paqueteSet->clave) + sizeof(paqueteSet->idESI) + sizeof(paqueteSet->sizeValor) + paqueteSet->sizeValor;
 	char *serializedPackage = malloc(packageSize);
 	int offset = 0;

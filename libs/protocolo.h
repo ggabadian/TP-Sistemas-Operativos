@@ -50,9 +50,9 @@ typedef struct {
 typedef struct {
 	char clave[40];
 	uint32_t sizeValor;
-	char valor[255]; // (Pendiente) Cambiar
+	char* valor;
 	uint32_t idESI;
-} __attribute__((packed)) t_set;
+} t_set;
 
 typedef struct {
 	char clave[40];
@@ -71,5 +71,7 @@ typedef struct {
 char* identificar(e_context);
 t_head recvHead(int);
 void sendHead(int, t_head);
+int recvSet(int, t_set *);
+void sendSet(int, t_set *);
 
 #endif /* LIBS_PROTOCOLO_H_ */

@@ -196,8 +196,9 @@ int main() {
 							break;						// we got some data from the coordinador
 
 						case OPERACION_SET:
-							recv(i, &paqueteSet, header.mSize, 0);
+							recvSet(i, &paqueteSet);
 							printf("Se recibió un SET <%s> <%s> del ESI %d\n",paqueteSet.clave, paqueteSet.valor, paqueteSet.idESI);
+							//Usar donde corresponda: free(paqueteSet.valor);
 							break;
 						case OPERACION_STORE:
 							recv(i, &paqueteStore, header.mSize, 0);
