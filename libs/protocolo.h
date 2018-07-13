@@ -27,9 +27,9 @@ typedef enum {
 
 	// MENSAJES COMPARTIDOS
 	ERROR_HEAD,
-	ACT_GET,
-	ACT_SET,
-	ACT_STORE
+	OPERACION_GET,
+	OPERACION_SET,
+	OPERACION_STORE
 } e_context;
 // -----------------------
 

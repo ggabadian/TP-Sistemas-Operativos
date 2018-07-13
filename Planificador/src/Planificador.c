@@ -188,18 +188,18 @@ int main() {
 					} else {
 						// we got some data from the coordinador
 						switch (header.context) {
-						case ACT_GET:
+						case OPERACION_GET:
 							recv(i, &paqueteGet, header.mSize, 0);
 							printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, paqueteGet.idESI);
 							// verificar si la solicitud es valida
 							// mandar por si o por no
 							break;						// we got some data from the coordinador
 
-						case ACT_SET:
+						case OPERACION_SET:
 							recv(i, &paqueteSet, header.mSize, 0);
 							printf("Se recibió un SET <%s> <%s> del ESI %d\n",paqueteSet.clave, paqueteSet.valor, paqueteSet.idESI);
 							break;
-						case ACT_STORE:
+						case OPERACION_STORE:
 							recv(i, &paqueteStore, header.mSize, 0);
 							printf("Se recibió un STORE <%s> del ESI %d \n", paqueteStore.clave, paqueteStore.idESI);
 							break;

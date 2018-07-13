@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 		if (parsed.valido) {
 			switch (parsed.keyword) {
 			case GET:
-				header.context = ACT_GET;
+				header.context = OPERACION_GET;
 				header.mSize = sizeof(paqueteGet);
 
 				if (strlen(parsed.argumentos.GET.clave) <= 40){ // Maximo permitido por consigna
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
 				send(coordinadorSocket, &paqueteGet, sizeof(paqueteGet), 0);
 				break;
 			case SET:
-				header.context = ACT_SET;
+				header.context = OPERACION_SET;
 				header.mSize = sizeof(paqueteSet);
 
 				if (strlen(parsed.argumentos.SET.clave) <= 40){ // Maximo permitido por consigna
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
 				send(coordinadorSocket, &paqueteSet, sizeof(paqueteSet), 0);
 				break;
 			case STORE:
-				header.context = ACT_STORE;
+				header.context = OPERACION_STORE;
 				header.mSize = sizeof(paqueteStore);
 
 				if (strlen(parsed.argumentos.STORE.clave) <= 40){ // Maximo permitido por consigna

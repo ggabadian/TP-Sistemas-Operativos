@@ -119,7 +119,7 @@ void* threadESI(void* socket) {
 		t_head header = recvHead(socketESI);
 
 		switch(header.context){
-			case ACT_GET:
+			case OPERACION_GET:
 				recv(socketESI, &paqueteGet, header.mSize, 0);
 				log_trace(logDeOperaciones, "(ESI %d) GET <%s>", idESI, paqueteGet.clave);
 				// Consulta al planificador
@@ -133,7 +133,7 @@ void* threadESI(void* socket) {
 				// si no:
 					//sendBlockedESI(socketESI);
 				break;
-			case ACT_SET:
+			case OPERACION_SET:
 				recv(socketESI, &paqueteSet, header.mSize, 0);
 				log_trace(logDeOperaciones, "(ESI %d) SET <%s> <%s>", idESI, paqueteSet.clave, paqueteSet.valor);
 				// Consulta al planificador
@@ -148,7 +148,7 @@ void* threadESI(void* socket) {
 				// si no:
 					//sendBlockedESI(socketESI);
 				break;
-			case ACT_STORE:
+			case OPERACION_STORE:
 				recv(socketESI, &paqueteStore, header.mSize, 0);
 				log_trace(logDeOperaciones, "(ESI %d) STORE <%s>", idESI, paqueteStore.clave);
 				// Consulta al planificador
@@ -344,7 +344,7 @@ t_instancia* keyExplicit(char* clave){
 
 void sendSet(t_instancia *instancia, t_set paquete){
 	t_head header;
-	header.context = ACT_SET;
+	header.context = OPERACION_SET;
 	header.mSize = sizeof(paquete);
 
 	sendHead(instancia->socket, header);

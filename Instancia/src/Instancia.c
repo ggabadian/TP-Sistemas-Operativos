@@ -103,12 +103,12 @@ bool recibirDeCoordinador(){
 		TAMANIO_ENTRADAS = paqueteInit->sizeofEntrada;
 		TABLA_ENTRADAS = list_create();
 	break;
-	case ACT_SET:
+	case OPERACION_SET:
 		recv(SOCKET_COORDINADOR,&paqueteSet,header.mSize,0);
 		set(paqueteSet);
 
 	break;
-	case ACT_STORE:
+	case OPERACION_STORE:
 		recv(SOCKET_COORDINADOR,&paqueteStore,header.mSize,0);
 		store(paqueteStore);
 	break;
