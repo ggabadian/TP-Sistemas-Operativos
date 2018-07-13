@@ -2,8 +2,8 @@
 
 int main(void) {
 	//creo el logger
-	logCoordinador = log_create("../log/logCoordinador.log", "Coordinador", true, LOG_LEVEL_TRACE);
-	logDeOperaciones = log_create("../log/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
+	logCoordinador = log_create("../logs/logCoordinador.log", "Coordinador", true, LOG_LEVEL_TRACE);
+	logDeOperaciones = log_create("../logs/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
 	log_trace(logCoordinador, "Iniciando Coordinador");
 
 	cargarConfig();

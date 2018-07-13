@@ -71,7 +71,6 @@ bool enviarACoordinador(char* msg){
 
 bool conectarCoordinador(){
 	t_head header;
-	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
 
 	SOCKET_COORDINADOR = connectSocket(IP_COORDINADOR,PUERTO_COORDINADOR);
 
@@ -85,6 +84,8 @@ bool conectarCoordinador(){
 	header.mSize = strlen(NOMBRE);
 	sendHead(SOCKET_COORDINADOR, header);
 	enviarACoordinador(NOMBRE);
+
+	log_info(LOG_INSTANCIA, "Conectada a Coordinador.");
 
 	return true;
 }
@@ -146,7 +147,7 @@ void finDumping(){
 int main(int argc, char* argv[]) {
 
 	//creo el logger
-	LOG_INSTANCIA = log_create("../log/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
+	LOG_INSTANCIA = log_create("../logs/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
 	cargarConfig(argv[1]);

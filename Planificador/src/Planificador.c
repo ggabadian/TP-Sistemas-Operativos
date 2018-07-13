@@ -85,7 +85,7 @@ void consola() {
 int main() {
 	t_log* logPlanificador;		//puede que haya que ponerla global si se usa en alguna funcion
 	//creo el logger
-	logPlanificador = log_create("/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/Planificador/log/logDePlanificador.log", "Planificador", true, LOG_LEVEL_TRACE);
+	logPlanificador = log_create("../logs/logDePlanificador.log", "Planificador", true, LOG_LEVEL_TRACE);
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	log_trace(logPlanificador, "Iniciando Planificador");
 

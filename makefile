@@ -1,6 +1,6 @@
 COMPILER=gcc
 BIN_PATH=bin
-LOG_PATH=log
+LOG_PATH=logs
 LIBS = libs/protocolo.c -lcommons -pthread # Define referencias
 CLIENTE = libs/socketClient.c
 SERVIDOR = libs/socketServer.c

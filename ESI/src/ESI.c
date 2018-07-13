@@ -5,7 +5,7 @@ int id = 0; //Este es el ID del ESI. Lo provee el Planificador en el handshake
 int main(int argc, char** argv) {
 	t_log* logESI;//puede que haya que ponerla global si se usa en alguna funcion
 	//creo el logger
-	logESI = log_create("../log/logDeESI.log", "ESI", true, LOG_LEVEL_TRACE);
+	logESI = log_create("../logs/logDeESI.log", "ESI", true, LOG_LEVEL_TRACE);
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	log_trace(logESI, "Iniciando ESI");
 	cargarConfig();
