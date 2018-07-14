@@ -202,6 +202,7 @@ void* threadInstancia(void* socket) {
 			default:
 				break;
 		}
+		header = recvHead(socketInstancia);
 	}
 	log_info(logCoordinador, "(%s) Se perdió la conexión.", nombreDeInstancia);
 
