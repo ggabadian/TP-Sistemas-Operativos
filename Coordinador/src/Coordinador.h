@@ -54,6 +54,7 @@ void enviarStore(t_instancia*, t_head, char*);
 void sendBlockedESI(int);
 void sendOkESI(int);
 bool desconectado (int);
+void enviarOrdenCompactar();
 
 
 #endif

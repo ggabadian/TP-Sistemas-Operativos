@@ -193,7 +193,16 @@ void* threadInstancia(void* socket) {
 		return NULL;
 	}
 
-	recvHead(socketInstancia); // Se queda bloqueado hasta que se desconecte
+	header = recvHead(socketInstancia);
+	while(header.context != ERROR_HEAD){ // Se queda bloqueado hasta que se desconecte
+		switch (header.context){
+			case ORDEN_COMPACTAR:
+				enviarOrdenCompactar(); // Envia la orden de compactar a todas las instancias
+				break;
+			default:
+				break;
+		}
+	}
 	log_info(logCoordinador, "(%s) Se perdió la conexión.", nombreDeInstancia);
 
 	close(socketInstancia);
@@ -397,4 +406,19 @@ void sendOkESI(int socketESI){
 
 bool desconectado (int socket){
 	return (send(socket, 0, 0, 0) == -1);
+}
+
+void enviarOrdenCompactar(){
+	t_instancia *instancia;
+	int index = 0;
+	t_head header;
+
+	header.context = ORDEN_COMPACTAR;
+	header.mSize = 0;
+
+	while(index < list_size(instanciasConectadas)){
+		instancia = list_get(instanciasConectadas, index++);
+		if(!desconectado(instancia->socket))
+			sendHead(instancia->socket, header);
+	}
 }
