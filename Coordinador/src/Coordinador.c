@@ -280,17 +280,21 @@ void distribuirSet(t_set paquete){
 t_instancia* equitativeLoad(){
 	if (!list_is_empty(instanciasConectadas)){
 		t_instancia *instancia;
-		// Si la instancia anterior que eligio era la ultima, vuelve al principio
-//		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
-//			indexEquitativeLoad = 0;
+		int auxIndex = indexEquitativeLoad;
 
-		do { // (Pendiente) BUG - Rompe si todas las de la lista estan desconectadas
-		if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
-			indexEquitativeLoad = 0;
-		instancia= list_get(instanciasConectadas, indexEquitativeLoad ++);
-		} while(desconectado(instancia->socket));
+		do {
+			instancia= list_get(instanciasConectadas, indexEquitativeLoad ++);
+			// Si la instancia que eligió era la ultima, vuelve al principio
+			if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
+				indexEquitativeLoad = 0;
+		} while(desconectado(instancia->socket) && !(auxIndex == indexEquitativeLoad));
 
-		return instancia;
+		// Si esto pasa significa que ninguna instancia de la lista está conectada
+		if(desconectado(instancia->socket)){
+			return NULL;
+		} else { // Significa que encontro una instancia conectada
+			return instancia;
+		}
 	} else {
 		return NULL;
 	}
