@@ -1,12 +1,14 @@
 #include "Planificador.h"
 
-
 // Defino los nombres de las listas a utilizar
 t_list *listos;
 t_list *bloqueados;
 t_list *finalizados;
-t_list *clBloqueadas;
+t_dictionary *clavesBloqueadas;
 
+bool planificacionPausada;
+bool hayQuePlanificar;
+bool conDesalojo;
 
 void consola() {
 	system("clear");
@@ -83,19 +85,28 @@ void consola() {
 }
 
 int main() {
-	t_log* logPlanificador;		//puede que haya que ponerla global si se usa en alguna funcion
-	//creo el logger
-	logPlanificador = log_create("../logs/logDePlanificador.log", "Planificador", true, LOG_LEVEL_TRACE);
+
+	//creo el logger//puede que haya que ponerla global si se usa en alguna funcion
+	t_log* logPlanificador;
+
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
+	logPlanificador = log_create("../logs/logDePlanificador.log",
+			"Planificador", true, LOG_LEVEL_TRACE);
+
 	log_trace(logPlanificador, "Iniciando Planificador");
 
-	cargarConfigPlanificador(); 	// Cargo la configuración del Planificador desde el archivo config
+	// Cargo la configuración del Planificador desde el archivo config
+	cargarConfigPlanificador();
+
+	if (strcmp(ALGORITMO, "SJF-CD") == 0) {
+		conDesalojo = true;
+	}
 
 	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
 	bloqueados = list_create();
 	finalizados = list_create();
-	clBloqueadas = list_create();
+	clavesBloqueadas = dictionary_create();
 
 	t_ESI *proximoESI;
 
@@ -103,15 +114,15 @@ int main() {
 	header.context = PLANIFICADOR;
 	header.mSize = 0;
 
-	printf("PUERTO= %s\n", PUERTO);
-	printf("ALGORITMO= %s\n", ALGORITMO);
-	printf("ALFA= %d\n", ALFA);
-	printf("ESTIMACION= %d\n", ESTIMACION_I);
-	printf("IP COORDINADOR= %s\n", IP_COORDINADOR);
-	printf("PUERTO COORDINADOR= %s\n", PUERTO_COORDINADOR);
-	printf("CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
+	log_info(logPlanificador, "PUERTO= %s\n", PUERTO);
+	log_info(logPlanificador, "ALGORITMO= %s\n", ALGORITMO);
+	log_info(logPlanificador, "ALFA= %d\n", ALFA);
+	log_info(logPlanificador, "ESTIMACION= %d\n", ESTIMACION_I);
+	log_info(logPlanificador, "IP COORDINADOR= %s\n", IP_COORDINADOR);
+	log_info(logPlanificador, "PUERTO COORDINADOR= %s\n", PUERTO_COORDINADOR);
+	log_info(logPlanificador, "CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
 
-	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR);		//Envío solicitud de conexión al Coordinador
+	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
 	printf("Conectado a Coordinador. \n");
 	sendHead(coordinadorSocket, header); // Le avisa que es el planificador
 
@@ -170,7 +181,7 @@ int main() {
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
 						idESI++;
 						send(socketCliente, &idESI, sizeof(idESI), 0);
-						agregarESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
+						agregarNuevoESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
 					}
 
 					// handle new connections
@@ -190,19 +201,58 @@ int main() {
 						switch (header.context) {
 						case OPERACION_GET:
 							recv(i, &paqueteGet, header.mSize, 0);
-							printf("Se recibió un GET <%s> del ESI %d \n", paqueteGet.clave, paqueteGet.idESI);
+							printf("Se recibió un GET <%s> del ESI %d \n",
+									paqueteGet.clave, paqueteGet.idESI);
+
 							// verificar si la solicitud es valida
-							// mandar por si o por no
-							break;						// we got some data from the coordinador
+							if (dictionary_get(clavesBloqueadas,
+									paqueteGet.clave) == NULL) { //nadie tiene tomada la clave
+								dictionary_put(clavesBloqueadas,
+										paqueteGet.clave, &paqueteGet.idESI);
+								//enviar exito
+
+							} else if (*(int*) (dictionary_get(clavesBloqueadas,
+									paqueteGet.clave)) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
+								//enviar exito
+
+							} else { // otro esi tiene bloqueada la clave
+								//enviar fail y ¿bloquear esi?
+							}
+
+							break;
 
 						case OPERACION_SET:
 							recvSet(i, &paqueteSet);
-							printf("Se recibió un SET <%s> <%s> del ESI %d\n",paqueteSet.clave, paqueteSet.valor, paqueteSet.idESI);
+							printf("Se recibió un SET <%s> <%s> del ESI %d\n",
+									paqueteSet.clave, paqueteSet.valor,
+									paqueteSet.idESI);
+							// verificar si la solicitud es valida
+							if (dictionary_get(clavesBloqueadas,paqueteSet.clave) == NULL) { //nadie tiene tomada la clave
+								//enviar fail y ¿abortar esi?
+							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
+								//enviar exito
+							} else { //otro esi tiene bloqueada la clave
+								//enviar fail y ¿abortar esi?
+							}
+
 							//Usar donde corresponda: free(paqueteSet.valor);
 							break;
 						case OPERACION_STORE:
 							recv(i, &paqueteStore, header.mSize, 0);
-							printf("Se recibió un STORE <%s> del ESI %d \n", paqueteStore.clave, paqueteStore.idESI);
+							printf("Se recibió un STORE <%s> del ESI %d \n",
+									paqueteStore.clave, paqueteStore.idESI);
+
+							// verificar si la solicitud es valida
+							if (dictionary_get(clavesBloqueadas,paqueteStore.clave) == NULL) { //nadie tiene tomada la clave
+								//enviar fail ¿abortar esi?
+							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
+								//enviar exito
+								dictionary_remove_and_destroy(clavesBloqueadas,paqueteStore.clave, free);
+
+							} else { //otro esi tiene tomada la clave
+								//enviar fail y ¿abortar esi?
+							}
+
 							break;
 						default:
 							printf("La solicitud del ESI %d es inválida.\n",
@@ -221,11 +271,15 @@ int main() {
 						case blockedESI:
 							recv(i, clave, header.mSize, 0);
 							//(Pendiente) Obtener idESI a partir de su socket
-							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n", idESI, clave);
+							printf(
+									"El ESI %d me informa que queda bloqueado esperando la clave %s.\n",
+									idESI, clave);
 							// Sacar ESI de cola de listos, agregar a cola de bloqueados por la clave
 							break;
 						case okESI:
-							printf("El ESI %d finalizo su accion correctamente.\n", idESI);
+							printf(
+									"El ESI %d finalizo su accion correctamente.\n",
+									idESI);
 							break;
 						default:
 							printf("Error en ESI.\n");
@@ -246,17 +300,13 @@ int main() {
 	return 0;
 }
 
-
-
 //************* FUNCIONES *******************
 
-void agregarESIAColaDeListos(int socketESI, int id) {
+void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	t_ESI *nuevoESI = malloc(sizeof(t_ESI));
 	nuevoESI->idESI = id;
 	nuevoESI->socket = socketESI;
-	nuevoESI->esperaClave = NULL;
-	nuevoESI->estAntRaf = ESTIMACION_I;
-	nuevoESI->estSigRaf = ESTIMACION_I;
+	nuevoESI->estimado = ESTIMACION_I;
 
 	list_add(listos, nuevoESI);
 }
@@ -267,18 +317,18 @@ t_ESI *planificar() {
 	estimar();
 
 	if (!strcmp(ALGORITMO, "SJF-SD")) {
-			esi = sjfsd();
-		}
+		esi = sjfsd();
+	}
 //		else if (!strcmp(ALGORITMO, "SJF-CD")) {
 //			esi = sjfcd();
 //		}
 //		else if (!strcmp(ALGORITMO, "HRRN")) {
 //			esi = hrrn();
 //		}
-		else {
-			puts("Error: No se pudo determinar el algoritmo de planificación");
-			return NULL;
-		}
+	else {
+		puts("Error: No se pudo determinar el algoritmo de planificación");
+		return NULL;
+	}
 	return esi;
 
 //		if(esi != NULL){
@@ -295,91 +345,31 @@ void estimar() {
 	int i;
 	int cantEsisListos = list_size(listos);
 	t_ESI *aux;
-	for (i=0; i < cantEsisListos; i++){
+	for (i = 0; i < cantEsisListos; i++) {
 		aux = list_get(listos, i);
-		aux->estSigRaf = (ALFA/100)*(aux->tn)+((1-(ALFA/100))*aux->estAntRaf);
+		aux->estimado = (ALFA / 100) * (aux->real)
+				+ ((1 - (ALFA / 100)) * aux->estimado);
 	}
 }
 
 t_ESI *sjfsd() {
-	if (!list_is_empty(listos)){
-			t_ESI *esi;
-			t_ESI *esiElegido;
-			int index = 0;
+	if (!list_is_empty(listos)) {
+		t_ESI *esi;
+		t_ESI *esiElegido;
+		int index = 0;
 
+		esiElegido = list_get(listos, index++);
 
-			esiElegido = list_get(listos, index++);
+		while (index < list_size(listos)) {
+			// Guarda la instancia de ese index y lo incrementa
+			esi = list_get(listos, index++);
 
-
-			while(index < list_size(listos)){
-				// Guarda la instancia de ese index y lo incrementa
-				esi = list_get(listos, index++);
-
-				if (esi->estSigRaf < esiElegido->estSigRaf)
-					// Guarda la nueva instancia con mayor entradas libres como candidata
-					esiElegido = esi;
-			}
-			return esiElegido;
-		} else {
-			return NULL;
+			if (esi->estimado < esiElegido->estimado)
+				// Guarda la nueva instancia con mayor entradas libres como candidata
+				esiElegido = esi;
 		}
+		return esiElegido;
+	} else {
+		return NULL;
+	}
 }
-
-//int main(void) {
-//
-//	int newfd; 			// newly accept()ed socket descriptor
-//	struct sockaddr_storage remoteaddr; // client address
-//	socklen_t addrlen;
-//
-//	char buf[256];		// buffer for client data
-//	int nbytes;
-//
-//	char remoteIP[INET6_ADDRSTRLEN];
-//
-//	int yes = 1;		// for setsockopt() SO_REUSEADDR, below
-//	int i, j, rv;
-//
-//	struct addrinfo hints, *ai, *p;
-//
-//	// get us a socket and bind it
-//	memset(&hints, 0, sizeof hints);
-//	hints.ai_family = AF_UNSPEC;
-//	hints.ai_socktype = SOCK_STREAM;
-//	hints.ai_flags = AI_PASSIVE;
-//	if ((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0) {
-//		fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
-//		exit(1);
-//	}
-//
-//	for (p = ai; p != NULL; p = p->ai_next) {
-//		listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-//		if (listener < 0) {
-//			continue;
-//		}
-//
-//		// lose the pesky "address already in use" error message
-//		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-//
-//		if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
-//			close(listener);
-//			continue;
-//		}
-//		break;
-//	}
-//
-//	// if we got here, it means we didn't get bound
-//	if (p == NULL) {
-//		fprintf(stderr, "selectserver: failed to bind\n");
-//		exit(2);
-//	}
-//
-//	freeaddrinfo(ai); // all done with this
-//
-//	// listen
-//	if (listen(listener, 10) == -1) {
-//		perror("listen");
-//		exit(3);
-//	}
-//
-//	return 0;
-//}
