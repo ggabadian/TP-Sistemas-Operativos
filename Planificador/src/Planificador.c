@@ -10,80 +10,6 @@ bool planificacionPausada;
 bool hayQuePlanificar;
 bool conDesalojo;
 
-void consola() {
-	system("clear");
-	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
-	puts("1) Pausar / Continuar");
-	puts("2) Bloquear (Clave, ID)");
-	puts("3) Desbloquear (Clave)");
-	puts("4) Listar (Recurso)");
-	puts("5) Kill (ID)");
-	puts("6) Status (Clave)");
-	puts("7) Deadlock");
-	printf("Ingrese Nro de comando: ");
-	int opcion;
-	//char* clave;
-	//char* id;
-	//char* recurso;
-	scanf("%d", &opcion);
-
-	switch (opcion) {
-	case 1:
-		system("clear");
-		puts("PAUSAR / CONTINUAR");
-		printf("Oprima 'P' para Pausar o 'C' para Continuar: ");
-		scanf("%d", &opcion);
-		if (opcion == 'P')
-			printf("\n\nSe eligió Pausar");
-		if (opcion == 'C')
-			printf("\n\nSe eleigió Continuar");
-		else
-			printf("\n\nOpcion incorrecta");
-		break;
-
-	case 2:
-		system("clear");
-		puts("BLOQUEAR");
-		printf("Inserte Clave: ");
-		//scanf("%s", clave);
-		printf("\nInserte ID: ");
-		//scanf("%s", id);
-		break;
-
-	case 3:
-		system("clear");
-		puts("DESBLOQUEAR");
-		printf("Inserte Clave: ");
-		//scanf("%s", clave);
-		break;
-
-	case 4:
-		system("clear");
-		puts("LISTAR");
-		printf("Inserte Recurso: ");
-		//scanf("%s", recurso);
-		break;
-
-	case 5:
-		system("clear");
-		puts("KILL");
-		printf("Escriba el ID del proceso a matar: ");
-		//scanf("%s", id);
-		break;
-
-	case 6:
-		system("clear");
-		puts("STATUS");
-		printf("El algoritmo que está corriendo es: ");
-		break;
-
-	case 7:
-		system("clear");
-		puts("Los deadlocks existentes son:");
-		break;
-	}
-}
-
 int main() {
 
 	//creo el logger//puede que haya que ponerla global si se usa en alguna funcion
@@ -120,7 +46,13 @@ int main() {
 	log_info(logPlanificador, "ESTIMACION= %d\n", ESTIMACION_I);
 	log_info(logPlanificador, "IP COORDINADOR= %s\n", IP_COORDINADOR);
 	log_info(logPlanificador, "PUERTO COORDINADOR= %s\n", PUERTO_COORDINADOR);
-	log_info(logPlanificador, "CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[0]);
+
+	//Agrego las claves bloqueadas por archivo configuración a la lista de claves
+	//En la descripción agrego que son por archivo CONFIG ya que después servirá para calular el Deadlock
+	for (int claveI = 0; CL_BLOQUEADAS[claveI] != NULL; claveI++) {
+		log_info(logPlanificador, "CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[claveI]);
+		dictionary_put(clavesBloqueadas, CL_BLOQUEADAS[claveI], "POR ARCHIVO CONFIG");
+	}
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
 	printf("Conectado a Coordinador. \n");
@@ -371,5 +303,79 @@ t_ESI *sjfsd() {
 		return esiElegido;
 	} else {
 		return NULL;
+	}
+}
+
+void consola() {
+	system("clear");
+	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
+	puts("1) Pausar / Continuar");
+	puts("2) Bloquear (Clave, ID)");
+	puts("3) Desbloquear (Clave)");
+	puts("4) Listar (Recurso)");
+	puts("5) Kill (ID)");
+	puts("6) Status (Clave)");
+	puts("7) Deadlock");
+	printf("Ingrese Nro de comando: ");
+	int opcion;
+	//char* clave;
+	//char* id;
+	//char* recurso;
+	scanf("%d", &opcion);
+
+	switch (opcion) {
+	case 1:
+		system("clear");
+		puts("PAUSAR / CONTINUAR");
+		printf("Oprima 'P' para Pausar o 'C' para Continuar: ");
+		scanf("%d", &opcion);
+		if (opcion == 'P')
+			printf("\n\nSe eligió Pausar");
+		if (opcion == 'C')
+			printf("\n\nSe eleigió Continuar");
+		else
+			printf("\n\nOpcion incorrecta");
+		break;
+
+	case 2:
+		system("clear");
+		puts("BLOQUEAR");
+		printf("Inserte Clave: ");
+		//scanf("%s", clave);
+		printf("\nInserte ID: ");
+		//scanf("%s", id);
+		break;
+
+	case 3:
+		system("clear");
+		puts("DESBLOQUEAR");
+		printf("Inserte Clave: ");
+		//scanf("%s", clave);
+		break;
+
+	case 4:
+		system("clear");
+		puts("LISTAR");
+		printf("Inserte Recurso: ");
+		//scanf("%s", recurso);
+		break;
+
+	case 5:
+		system("clear");
+		puts("KILL");
+		printf("Escriba el ID del proceso a matar: ");
+		//scanf("%s", id);
+		break;
+
+	case 6:
+		system("clear");
+		puts("STATUS");
+		printf("El algoritmo que está corriendo es: ");
+		break;
+
+	case 7:
+		system("clear");
+		puts("Los deadlocks existentes son:");
+		break;
 	}
 }
