@@ -217,6 +217,7 @@ int main() {
 							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",idESI, clave);
 							// Sacar ESI de cola de listos, agregar a cola de bloqueados por la clave
 							hayQuePlanificar=true;
+							proximoESI=NULL;
 							break;
 						case okESI:
 							printf("El ESI %d finalizo su accion correctamente.\n",idESI);
@@ -224,16 +225,17 @@ int main() {
 						case terminatedESI:
 							hayQuePlanificar=true;
 							//mas cosas
+							proximoESI=NULL;
 							break;
 						case abortESI:
 							hayQuePlanificar=true;
 							//mas cosas
+							proximoESI=NULL;
 							break;
 						default:
 							printf("Error en ESI.\n");
 						}
 						hayQueEnviarOrdenDeEjecucion=true;
-						proximoESI=NULL;
 					}
 				}
 			} // END got new incoming connection
