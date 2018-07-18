@@ -2,22 +2,29 @@
 
 // Defino los nombres de las listas a utilizar
 t_list *listos;
-t_list *bloqueados;
+t_list *bloqueados; // no va a haber una lista de bloqueados, sino varias colas, una por cada recurso.
+					// Puede ser un diccionario, se entra por clave y retorna la lista con los esis encolados
 t_list *finalizados;
 t_dictionary *clavesBloqueadas;
 
 bool planificacionPausada;
-bool hayQuePlanificar;
-bool conDesalojo;
+int clock; //clock del sistema. Se incrementa cada vez que se envia una orden de ejecucion. (cuenta la cantidad total de ordenes enviadas
+					 //tambien sirve para medir el tiempo que un esi lleva esperando en la cola de listos. (debe guardarse en su t_esi y calcular la diferencia)
+t_ESI *proximoESI;
 
 int main() {
+
+	bool hayQuePlanificar=false;
+	bool hayQueEnviarOrdenDeEjecucion=false;
+	bool conDesalojo;
+	clock=0;
+	proximoESI=NULL;
 
 	//creo el logger//puede que haya que ponerla global si se usa en alguna funcion
 	t_log* logPlanificador;
 
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
-	logPlanificador = log_create("../logs/logDePlanificador.log",
-			"Planificador", true, LOG_LEVEL_TRACE);
+	logPlanificador = log_create("../logs/logDePlanificador.log","Planificador", true, LOG_LEVEL_TRACE);
 
 	log_trace(logPlanificador, "Iniciando Planificador");
 
@@ -30,11 +37,11 @@ int main() {
 
 	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
-	bloqueados = list_create();
+	bloqueados = list_create(); // no va a haber una lista de bloqueados, sino varias colas, una por cada recurso
 	finalizados = list_create();
 	clavesBloqueadas = dictionary_create();
 
-	t_ESI *proximoESI;
+
 
 	t_head header;
 	header.context = PLANIFICADOR;
@@ -74,9 +81,7 @@ int main() {
 	FD_SET(coordinadorSocket, &master);
 
 	// keep track of the biggest file descriptor
-	fdmax = (
-			listeningSocket > coordinadorSocket ?
-					listeningSocket : coordinadorSocket);
+	fdmax = (listeningSocket > coordinadorSocket ?listeningSocket : coordinadorSocket);
 
 	t_get paqueteGet;
 	t_set paqueteSet;
@@ -113,10 +118,17 @@ int main() {
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
 						idESI++;
 						send(socketCliente, &idESI, sizeof(idESI), 0);
-						agregarNuevoESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
+						agregarNuevoESIAColaDeListos(socketCliente, idESI);//Agrego el nuevo ESI a la cola de listos
 					}
 
-					// handle new connections
+					if (idESI==1){
+						hayQueEnviarOrdenDeEjecucion=true; //cuando se conecta el primer esi, si o si hay que planificar y enviar orden
+						hayQuePlanificar=true;
+					}
+
+					if (conDesalojo){
+						hayQuePlanificar=true;
+					}
 
 					FD_SET(socketCliente, &master); // add to master set
 					if (socketCliente > fdmax) {	// keep track of the max
@@ -133,22 +145,18 @@ int main() {
 						switch (header.context) {
 						case OPERACION_GET:
 							recv(i, &paqueteGet, header.mSize, 0);
-							printf("Se recibió un GET <%s> del ESI %d \n",
-									paqueteGet.clave, paqueteGet.idESI);
+							printf("Se recibió un GET <%s> del ESI %d \n",paqueteGet.clave, paqueteGet.idESI);
 
 							// verificar si la solicitud es valida
-							if (dictionary_get(clavesBloqueadas,
-									paqueteGet.clave) == NULL) { //nadie tiene tomada la clave
-								dictionary_put(clavesBloqueadas,
-										paqueteGet.clave, &paqueteGet.idESI);
+							if (dictionary_get(clavesBloqueadas,paqueteGet.clave) == NULL) { //nadie tiene tomada la clave
+								dictionary_put(clavesBloqueadas,paqueteGet.clave, &paqueteGet.idESI);
 								//enviar exito
 
-							} else if (*(int*) (dictionary_get(clavesBloqueadas,
-									paqueteGet.clave)) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
-								//enviar exito
+							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave)) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
+								//enviar exito??
 
 							} else { // otro esi tiene bloqueada la clave
-								//enviar fail y ¿bloquear esi?
+								//enviar fail y ¿bloquear esi?o se bloquea cuando el esi retorna?
 							}
 
 							break;
@@ -156,7 +164,8 @@ int main() {
 						case OPERACION_SET:
 							recvSet(i, &paqueteSet);
 							printf("Se recibió un SET <%s> <%s> del ESI %d\n",
-									paqueteSet.clave, paqueteSet.valor,
+									paqueteSet.clave,
+									paqueteSet.valor,
 									paqueteSet.idESI);
 							// verificar si la solicitud es valida
 							if (dictionary_get(clavesBloqueadas,paqueteSet.clave) == NULL) { //nadie tiene tomada la clave
@@ -179,16 +188,18 @@ int main() {
 								//enviar fail ¿abortar esi?
 							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
 								//enviar exito
-								dictionary_remove_and_destroy(clavesBloqueadas,paqueteStore.clave, free);
+								dictionary_remove(clavesBloqueadas,paqueteStore.clave);
 
 							} else { //otro esi tiene tomada la clave
 								//enviar fail y ¿abortar esi?
 							}
 
+							//cuando se hace un store hay que pasar a ready el primer esi encolado en espera de esa clave
+							//si es con desalojo y se desbloquea un esi, hay que replanificar
+
 							break;
 						default:
-							printf("La solicitud del ESI %d es inválida.\n",
-									idESI);
+							printf("La solicitud del ESI %d es inválida.\n",idESI);
 						}
 					}
 				} else { //Un ESI me quiere decir algo
@@ -203,25 +214,40 @@ int main() {
 						case blockedESI:
 							recv(i, clave, header.mSize, 0);
 							//(Pendiente) Obtener idESI a partir de su socket
-							printf(
-									"El ESI %d me informa que queda bloqueado esperando la clave %s.\n",
-									idESI, clave);
+							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",idESI, clave);
 							// Sacar ESI de cola de listos, agregar a cola de bloqueados por la clave
+							hayQuePlanificar=true;
 							break;
 						case okESI:
-							printf(
-									"El ESI %d finalizo su accion correctamente.\n",
-									idESI);
+							printf("El ESI %d finalizo su accion correctamente.\n",idESI);
+							break;
+						case terminatedESI:
+							hayQuePlanificar=true;
+							//mas cosas
+							break;
+						case abortESI:
+							hayQuePlanificar=true;
+							//mas cosas
 							break;
 						default:
 							printf("Error en ESI.\n");
 						}
+						hayQueEnviarOrdenDeEjecucion=true;
+						proximoESI=NULL;
 					}
 				}
 			} // END got new incoming connection
 		} // END looping through file descriptors
-		estimar();
-		proximoESI = planificar();
+
+		if(hayQuePlanificar){
+			proximoESI=planificar();
+			hayQuePlanificar=false;
+		}
+
+		if(hayQueEnviarOrdenDeEjecucion){
+			enviarOrdenDeEjecucion();
+			hayQueEnviarOrdenDeEjecucion=false;
+		}
 
 	} // END for(;;)--and you thought it would never end!
 
@@ -239,6 +265,7 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	nuevoESI->idESI = id;
 	nuevoESI->socket = socketESI;
 	nuevoESI->estimado = ESTIMACION_I;
+	nuevoESI->listoDesde = clock;
 
 	list_add(listos, nuevoESI);
 }
@@ -246,7 +273,6 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 //-------------------------------------------------
 t_ESI *planificar() {
 	t_ESI *esi;
-	estimar();
 
 	if (!strcmp(ALGORITMO, "SJF-SD")) {
 		esi = sjfsd();
@@ -271,6 +297,7 @@ t_ESI *planificar() {
 //		} else {
 //			puts("Error: No hay ninguna instancia para recibir la solicitud.");
 //		}
+
 }
 
 void estimar() {
@@ -304,6 +331,12 @@ t_ESI *sjfsd() {
 	} else {
 		return NULL;
 	}
+}
+
+void enviarOrdenDeEjecucion(){
+	//se envia orden de ejecutar al esi guardado en la variable proximoESI
+	clock++;
+
 }
 
 void consola() {
