@@ -43,9 +43,9 @@ int main() {
 
 
 
-	t_head header;
-	header.context = PLANIFICADOR;
-	header.mSize = 0;
+	t_head soyElPlanificador;
+	soyElPlanificador.context = PLANIFICADOR;
+	soyElPlanificador.mSize = 0;
 
 	log_info(logPlanificador, "PUERTO= %s\n", PUERTO);
 	log_info(logPlanificador, "ALGORITMO= %s\n", ALGORITMO);
@@ -63,7 +63,7 @@ int main() {
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
 	printf("Conectado a Coordinador. \n");
-	sendHead(coordinadorSocket, header); // Le avisa que es el planificador
+	sendHead(coordinadorSocket, soyElPlanificador); // Le aviso al Coordinador que soy el Planificador
 
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
@@ -118,7 +118,7 @@ int main() {
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
 						idESI++;
 						send(socketCliente, &idESI, sizeof(idESI), 0);
-						agregarNuevoESIAColaDeListos(socketCliente, idESI);//Agrego el nuevo ESI a la cola de listos
+						agregarNuevoESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
 					}
 
 					if (idESI==1){
@@ -151,6 +151,7 @@ int main() {
 							if (dictionary_get(clavesBloqueadas,paqueteGet.clave) == NULL) { //nadie tiene tomada la clave
 								dictionary_put(clavesBloqueadas,paqueteGet.clave, &paqueteGet.idESI);
 								//enviar exito
+								okPermitirEjecutarEsi(coordinadorSocket, soyElPlanificador);
 
 							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave)) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
 								//enviar exito??
@@ -172,6 +173,7 @@ int main() {
 								//enviar fail y ¿abortar esi?
 							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
 								//enviar exito
+								okPermitirEjecutarEsi(coordinadorSocket, soyElPlanificador);
 							} else { //otro esi tiene bloqueada la clave
 								//enviar fail y ¿abortar esi?
 							}
@@ -188,6 +190,7 @@ int main() {
 								//enviar fail ¿abortar esi?
 							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
 								//enviar exito
+								okPermitirEjecutarEsi(coordinadorSocket, soyElPlanificador);
 								dictionary_remove(clavesBloqueadas,paqueteStore.clave);
 
 							} else { //otro esi tiene tomada la clave
@@ -339,6 +342,15 @@ void enviarOrdenDeEjecucion(){
 	//se envia orden de ejecutar al esi guardado en la variable proximoESI
 	clock++;
 
+}
+
+void okPermitirEjecutarEsi(int coordinadorSocket, t_head soyElPlanificador) {
+	t_head header;
+	header.context = okEjecutarESI;
+	header.mSize = 0;
+
+	sendHead(coordinadorSocket, soyElPlanificador); //Le aviso al Coordinador que soy el Planificador
+	sendHead(coordinadorSocket, header); //Le permito al Coordinador ejecutar la instrucción del ESI
 }
 
 void consola() {

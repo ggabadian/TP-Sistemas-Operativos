@@ -13,6 +13,7 @@ typedef enum {
 	INIT_INSTANCIA,
 
 	PLANIFICADOR,
+	okEjecutarESI,
 	//otraCosaDelPlanificador,
 
 	ESI,

@@ -38,6 +38,7 @@ t_ESI *planificar ();
 t_ESI *sjfsd();
 void estimar();
 void enviarOrdenDeEjecucion();
+void okPermitirEjecutarEsi(int, t_head);
 
 
 
