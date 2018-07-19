@@ -2,8 +2,7 @@
 
 // Defino los nombres de las listas a utilizar
 t_list *listos;
-t_list *bloqueados; // no va a haber una lista de bloqueados, sino varias colas, una por cada recurso.
-					// Puede ser un diccionario, se entra por clave y retorna la lista con los esis encolados
+t_dictionary *colasBloqueados;
 t_list *finalizados;
 t_dictionary *clavesBloqueadas;
 
@@ -11,6 +10,7 @@ bool planificacionPausada;
 int clock; //clock del sistema. Se incrementa cada vez que se envia una orden de ejecucion. (cuenta la cantidad total de ordenes enviadas
 					 //tambien sirve para medir el tiempo que un esi lleva esperando en la cola de listos. (debe guardarse en su t_esi y calcular la diferencia)
 t_ESI *proximoESI;
+t_ESI *running;
 
 int main() {
 
@@ -37,15 +37,15 @@ int main() {
 
 	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
-	bloqueados = list_create(); // no va a haber una lista de bloqueados, sino varias colas, una por cada recurso
+	colasBloqueados = dictionary_create(); //se entra por clave y devuelve cola de esis bloqueados en espera de la clave
 	finalizados = list_create();
-	clavesBloqueadas = dictionary_create();
 
 
+	clavesBloqueadas = dictionary_create(); //se entra por clave y devuelve el id del esi que la tiene
 
-	t_head soyElPlanificador;
-	soyElPlanificador.context = PLANIFICADOR;
-	soyElPlanificador.mSize = 0;
+	t_head headerAEnviar;
+	headerAEnviar.context = PLANIFICADOR;
+	headerAEnviar.mSize = 0;
 
 	log_info(logPlanificador, "PUERTO= %s\n", PUERTO);
 	log_info(logPlanificador, "ALGORITMO= %s\n", ALGORITMO);
@@ -63,7 +63,7 @@ int main() {
 
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
 	printf("Conectado a Coordinador. \n");
-	sendHead(coordinadorSocket, soyElPlanificador); // Le aviso al Coordinador que soy el Planificador
+	sendHead(coordinadorSocket, headerAEnviar); // Le aviso al Coordinador que soy el Planificador
 
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
@@ -118,16 +118,14 @@ int main() {
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
 						idESI++;
 						send(socketCliente, &idESI, sizeof(idESI), 0);
+						if(list_is_empty(listos)){
+							hayQueEnviarOrdenDeEjecucion=true; //cuando se conecta el primer esi, si o si hay que planificar y enviar orden
+							hayQuePlanificar=true;
+						}
 						agregarNuevoESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
-					}
-
-					if (idESI==1){
-						hayQueEnviarOrdenDeEjecucion=true; //cuando se conecta el primer esi, si o si hay que planificar y enviar orden
-						hayQuePlanificar=true;
-					}
-
-					if (conDesalojo){
-						hayQuePlanificar=true;
+						if (conDesalojo){
+							hayQuePlanificar=true;
+						}
 					}
 
 					FD_SET(socketCliente, &master); // add to master set
@@ -150,14 +148,20 @@ int main() {
 							// verificar si la solicitud es valida
 							if (dictionary_get(clavesBloqueadas,paqueteGet.clave) == NULL) { //nadie tiene tomada la clave
 								dictionary_put(clavesBloqueadas,paqueteGet.clave, &paqueteGet.idESI);
-								//enviar exito
-								okPermitirEjecutarEsi(coordinadorSocket, soyElPlanificador);
+								header.context=okESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
 
 							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave)) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
-								//enviar exito??
+								header.context=okESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
 
 							} else { // otro esi tiene bloqueada la clave
-								//enviar fail y ¿bloquear esi?o se bloquea cuando el esi retorna?
+								header.context=blockedESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
+								bloquearESI(paqueteGet.clave);
 							}
 
 							break;
@@ -169,13 +173,14 @@ int main() {
 									paqueteSet.valor,
 									paqueteSet.idESI);
 							// verificar si la solicitud es valida
-							if (dictionary_get(clavesBloqueadas,paqueteSet.clave) == NULL) { //nadie tiene tomada la clave
-								//enviar fail y ¿abortar esi?
-							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
-								//enviar exito
-								okPermitirEjecutarEsi(coordinadorSocket, soyElPlanificador);
-							} else { //otro esi tiene bloqueada la clave
-								//enviar fail y ¿abortar esi?
+							if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
+								header.context=okESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
+							} else { //otro esi tiene bloqueada la clave o no la tiene nadie
+								header.context=abortESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
 							}
 
 							//Usar donde corresponda: free(paqueteSet.valor);
@@ -186,20 +191,19 @@ int main() {
 									paqueteStore.clave, paqueteStore.idESI);
 
 							// verificar si la solicitud es valida
-							if (dictionary_get(clavesBloqueadas,paqueteStore.clave) == NULL) { //nadie tiene tomada la clave
-								//enviar fail ¿abortar esi?
-							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
-								//enviar exito
-								okPermitirEjecutarEsi(coordinadorSocket, soyElPlanificador);
-								dictionary_remove(clavesBloqueadas,paqueteStore.clave);
+							if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
+								dictionary_remove(clavesBloqueadas,paqueteSet.clave);
+								header.context=okESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
+								//cuando se hace un store hay que pasar a ready el primer esi encolado en espera de esa clave
+								//si es con desalojo y se desbloquea un esi, hay que replanificar
 
-							} else { //otro esi tiene tomada la clave
-								//enviar fail y ¿abortar esi?
+							} else { //otro esi tiene bloqueada la clave o no la tiene nadie
+								header.context=abortESI;
+								header.mSize=0;
+								sendHead(coordinadorSocket,header);
 							}
-
-							//cuando se hace un store hay que pasar a ready el primer esi encolado en espera de esa clave
-							//si es con desalojo y se desbloquea un esi, hay que replanificar
-
 							break;
 						default:
 							printf("La solicitud del ESI %d es inválida.\n",idESI);
@@ -234,6 +238,7 @@ int main() {
 							hayQuePlanificar=true;
 							//mas cosas
 							proximoESI=NULL;
+							finalizarESI();
 							break;
 						default:
 							printf("Error en ESI.\n");
@@ -275,6 +280,14 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	list_add(listos, nuevoESI);
 }
 
+void agregarESIAColaDeListos(t_ESI *esi) {
+	esi->estimado = ESTIMACION_I;
+	esi->listoDesde = clock;
+	esi->real=0;
+
+	list_add(listos, esi);
+}
+
 //-------------------------------------------------
 t_ESI *planificar() {
 	t_ESI *esi;
@@ -311,8 +324,7 @@ void estimar() {
 	t_ESI *aux;
 	for (i = 0; i < cantEsisListos; i++) {
 		aux = list_get(listos, i);
-		aux->estimado = (ALFA / 100) * (aux->real)
-				+ ((1 - (ALFA / 100)) * aux->estimado);
+		aux->estimado = (ALFA / 100) * (aux->real) + ((1 - (ALFA / 100)) * aux->estimado);
 	}
 }
 
@@ -339,19 +351,33 @@ t_ESI *sjfsd() {
 }
 
 void enviarOrdenDeEjecucion(){
-	//se envia orden de ejecutar al esi guardado en la variable proximoESI
+	if(proximoESI!=NULL){ //se envia orden de ejecutar al esi guardado en la variable proximoESI
+		t_head header;
+		header.context=executeESI;
+		header.mSize=0;
+		sendHead(proximoESI->socket,header);
+	}
 	clock++;
-
+	(proximoESI->real)++;
+	running=proximoESI;
 }
 
-void okPermitirEjecutarEsi(int coordinadorSocket, t_head soyElPlanificador) {
-	t_head header;
-	header.context = okEjecutarESI;
-	header.mSize = 0;
+void bloquearESI(char* clave){
 
-	sendHead(coordinadorSocket, soyElPlanificador); //Le aviso al Coordinador que soy el Planificador
-	sendHead(coordinadorSocket, header); //Le permito al Coordinador ejecutar la instrucción del ESI
+	if(dictionary_has_key(colasBloqueados, clave)){						//si ya hay procesos encolados
+		queue_push(dictionary_get(colasBloqueados,clave),running);		//agregar a la cola
+	}
+	else{																//sino
+		dictionary_put(colasBloqueados, clave, queue_create());			//crear cola en el diccionario
+		queue_push(dictionary_get(colasBloqueados,clave),running);		//agregar esi a la cola
+	}
 }
+
+void finalizarESI(){
+	//liberarRecursos();
+	list_add(finalizados, running);
+}
+
 
 void consola() {
 	system("clear");

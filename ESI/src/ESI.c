@@ -69,14 +69,14 @@ int main(int argc, char** argv) {
 
 	while (read != -1) {
 		// 5. esperar orden de ejecucion (trucho)
-		printf("Presione ENTER para parsear la próxima línea");
-		char enter = 0;
-		while (enter != '\r' && enter != '\n') {
-			enter = getchar();
-		}
+//		printf("Presione ENTER para parsear la próxima línea");
+//		char enter = 0;
+//		while (enter != '\r' && enter != '\n') {
+//			enter = getchar();
+//		}
 
 		// 5. esperar orden de ejecucion (posta)
-		//header = recvHead(planificadorSocket); //recibo orden de ejecucion
+		header = recvHead(planificadorSocket); //recibo orden de ejecucion
 
 		// 7. enviar al coordinador la opercion
 		if (parsed.valido) {
@@ -157,8 +157,8 @@ int main(int argc, char** argv) {
 		sendHead(planificadorSocket, header);
 		switch (header.context){
 			case blockedESI:
-				//continue; // (Pendiente) BUG - Esto rompe
-				break;
+				continue; // (Pendiente) BUG - Esto rompe
+				//break;
 			case okESI:
 				break;
 			case abortESI:

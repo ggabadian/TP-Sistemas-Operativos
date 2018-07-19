@@ -8,7 +8,8 @@
 #include "../../libs/socketClient.h"
 #include "../../libs/protocolo.h"
 #include <commons/collections/list.h>
-
+#include <commons/collections/queue.h>
+#include <commons/collections/dictionary.h>
 
 #define BACKLOG 5				//(Pendiente) Carga desde config
 #define PACKAGESIZE 1024
@@ -38,7 +39,9 @@ t_ESI *planificar ();
 t_ESI *sjfsd();
 void estimar();
 void enviarOrdenDeEjecucion();
-void okPermitirEjecutarEsi(int, t_head);
+void bloquearESI(char*);
+void finalizarESI();
+
 
 
 

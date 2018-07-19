@@ -13,8 +13,7 @@ typedef enum {
 	INIT_INSTANCIA,
 
 	PLANIFICADOR,
-	okEjecutarESI,
-	//otraCosaDelPlanificador,
+	executeESI,
 
 	ESI,
 	blockedESI,

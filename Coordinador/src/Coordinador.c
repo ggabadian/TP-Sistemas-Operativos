@@ -93,6 +93,7 @@ void* threadPlanificador(void* socket) {
 	int socketPlanificador = *(int*)socket;
 
 	while (1) {
+		sleep(20); //para que no coma CPU
 //		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
 //		hacerAlgo(headPlanificador);
 	}
@@ -127,11 +128,21 @@ void* threadESI(void* socket) {
 				send(socketPlanificador, &paqueteGet, sizeof(paqueteGet), 0);
 
 				// Recibe respuesta del planificador
-				// recv()
-				// Si puede, entonces:
-					sendOkESI(socketESI);
-				// si no:
-					//sendBlockedESI(socketESI);
+				header=recvHead(socketPlanificador);
+				puts("Recibi algo del planif");
+				switch (header.context){
+					case okESI:
+						sendOkESI(socketESI);
+						puts("ok");
+						break;
+					case blockedESI:
+						sendBlockedESI(socketESI);
+						puts("block");
+						break;
+					default:
+						puts("def");
+						break;
+				}
 				break;
 			case OPERACION_SET:
 				recvSet(socketESI, &paqueteSet);
@@ -141,12 +152,21 @@ void* threadESI(void* socket) {
 				sendSet(socketPlanificador, &paqueteSet);
 
 				// Recibe respuesta del planificador
-				// recv()
-				// Si puede, entonces:
-					sendOkESI(socketESI);
-					distribuirSet(paqueteSet);
-				// si no:
-					//sendBlockedESI(socketESI);
+				header=recvHead(socketPlanificador);
+				switch (header.context){
+					case okESI:
+						// (if distribuirSet(paqueteSet) == true){
+							sendOkESI(socketESI);
+						//} else {
+							//sendAbortESI(socketESI);
+						//}
+						break;
+					case abortESI:
+						//sendAbortESI(socketESI);
+						break;
+					default:
+						break;
+				}
 				break;
 			case OPERACION_STORE:
 				recv(socketESI, &paqueteStore, header.mSize, 0);
@@ -156,12 +176,21 @@ void* threadESI(void* socket) {
 				send(socketPlanificador, &paqueteStore, sizeof(paqueteStore), 0);
 
 				// Recibe respuesta del planificador
-				// recv()
-				// Si puede, entonces:
-					sendOkESI(socketESI);
-					//distribuirStore(header, paqueteStore.clave);
-				// si no:
-					//sendBlockedESI(socketESI);
+				header=recvHead(socketPlanificador);
+				switch (header.context){
+					case okESI:
+						// (if distribuirStore(paqueteStore) == true){
+							sendOkESI(socketESI);
+						//} else {
+							//sendAbortESI(socketESI);
+						//}
+						break;
+					case abortESI:
+						//sendAbortESI(socketESI);
+						break;
+					default:
+						break;
+				}
 				break;
 			case ERROR_HEAD:
 				log_info(logCoordinador, "(ESI %d) Se perdió la conexión.", idESI);
@@ -261,6 +290,8 @@ t_instancia *instanciaRegistrada(char* nombre){
 
 void distribuirSet(t_set paquete){
 	t_instancia *instancia;
+
+	//(Pendiente) Verificar si ya se encuentra
 
 	if (!strcmp(ALGORITMO, "EL")) {
 		instancia = equitativeLoad();
