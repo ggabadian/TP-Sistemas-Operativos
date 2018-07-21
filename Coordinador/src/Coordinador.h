@@ -33,7 +33,7 @@ typedef struct {
 	char* nombre;
 	int socket;
 	int entradasLibres;
-	t_list claves;
+	t_list* claves;
 } __attribute__((packed)) t_instancia;
 
 void crearThread(e_context, int);
@@ -57,6 +57,7 @@ void sendAbortESI(int);
 bool desconectado (int);
 void enviarOrdenCompactar();
 t_list *instanciasActivas();
-
+t_instancia* instanciaConClave(char*);
+bool claveRegistrada(char*, t_instancia*);
 
 #endif
