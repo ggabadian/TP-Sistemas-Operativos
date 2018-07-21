@@ -153,11 +153,11 @@ void* threadESI(void* socket) {
 						if (distribuirSet(paqueteSet)){
 							sendOkESI(socketESI);
 						} else {
-							//sendAbortESI(socketESI);
+							sendAbortESI(socketESI);
 						}
 						break;
 					case abortESI:
-						//sendAbortESI(socketESI);
+						sendAbortESI(socketESI);
 						break;
 					default:
 						break;
@@ -368,21 +368,25 @@ t_instancia* keyExplicit(char* clave){
 	// Cantidad de letras de las instancias que almacenarán claves (excepto la última)
 	int letrasPorInstancia = 0;
 	t_list *instanciasConectadas = instanciasActivas();
-	double division = cantidadDeLetras/(double)list_size(instanciasConectadas);
+	if (!list_is_empty(instanciasRegistradas)){
+		double division = cantidadDeLetras/(double)list_size(instanciasConectadas);
 
-	// Distribuye apropiadamente la cantidad de letras segun la cantidad de instancias
-	letrasPorInstancia = (int)ceil(division); // Redondea siempre para arriba
+		// Distribuye apropiadamente la cantidad de letras segun la cantidad de instancias
+		letrasPorInstancia = (int)ceil(division); // Redondea siempre para arriba
 
-	// Guarda la primera letra de la clave
-	char* letra = string_substring_until(clave, 1);
-	string_to_lower(letra); // La pasa a minúscula
-	int nroLetra = *letra - 'a' + 1;
+		// Guarda la primera letra de la clave
+		char* letra = string_substring_until(clave, 1);
+		string_to_lower(letra); // La pasa a minúscula
+		int nroLetra = *letra - 'a' + 1;
 
-	int indexInstancia = (int)(ceil(nroLetra/(double)letrasPorInstancia)) - 1;
+		int indexInstancia = (int)(ceil(nroLetra/(double)letrasPorInstancia)) - 1;
 
-	free(letra);
+		free(letra);
 
-	return list_get(instanciasConectadas, indexInstancia);
+		return list_get(instanciasConectadas, indexInstancia);
+	} else {
+		return NULL;
+	}
 }
 
 void enviarSet(t_instancia *instancia, t_set paquete){
@@ -433,6 +437,15 @@ void sendOkESI(int socketESI){
 	sendHead(socketESI, header);
 }
 
+void sendAbortESI(int socketESI){
+	t_head header;
+
+	header.context = abortESI;
+	header.mSize = 0;
+
+	sendHead(socketESI, header);
+}
+
 bool desconectado (int socket){
 	return (send(socket, 0, 0, 0) == -1);
 }
@@ -453,15 +466,19 @@ void enviarOrdenCompactar(){
 }
 
 t_list *instanciasActivas(){ // Retorna una lista con las instancias actualmente conectadas
-	t_instancia *instancia;
-	int index = 0;
-	t_list *instanciasConectadas = list_create();
+	if (!list_is_empty(instanciasRegistradas)){
+		t_instancia *instancia;
+		int index = 0;
+		t_list *instanciasConectadas = list_create();
 
-	while(index < list_size(instanciasRegistradas)){
-		instancia = list_get(instanciasRegistradas, index++);
-		if(!desconectado(instancia->socket))
-			list_add(instanciasConectadas, instancia);
+		while(index < list_size(instanciasRegistradas)){
+			instancia = list_get(instanciasRegistradas, index++);
+			if(!desconectado(instancia->socket))
+				list_add(instanciasConectadas, instancia);
+		}
+
+		return instanciasConectadas;
+	} else {
+		return NULL;
 	}
-
-	return instanciasConectadas;
 }

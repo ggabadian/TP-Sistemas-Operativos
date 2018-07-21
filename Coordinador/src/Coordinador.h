@@ -53,6 +53,7 @@ void distribuirStore(t_head, char*);
 void enviarStore(t_instancia*, t_head, char*);
 void sendBlockedESI(int);
 void sendOkESI(int);
+void sendAbortESI(int);
 bool desconectado (int);
 void enviarOrdenCompactar();
 t_list *instanciasActivas();
