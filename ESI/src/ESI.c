@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 		read = getline(&line, &len, fp); // 6. parseo de nuevo
 		parsed = parse(line);
 		numline++;
-		printf("\n");
+		//printf("\n");
 	}
 
 	header.context=terminatedESI;

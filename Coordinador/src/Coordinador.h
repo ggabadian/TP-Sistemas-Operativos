@@ -18,8 +18,8 @@
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Las instancias conectadas se guardan en esta lista
-t_list *instanciasConectadas;
+// Las instancias que se conectan se guardan en esta lista
+t_list *instanciasRegistradas;
 
 int socketPlanificador = 0;
 
@@ -44,7 +44,7 @@ void recibirMensaje(int);
 void sendInitInstancia(int);
 void registrarInstancia(int, char*);
 t_instancia* instanciaRegistrada(char*);
-void distribuirSet(t_set);
+bool distribuirSet(t_set);
 t_instancia* equitativeLoad();
 t_instancia* leastSpaceUsed();
 t_instancia* keyExplicit(char*);
@@ -55,6 +55,7 @@ void sendBlockedESI(int);
 void sendOkESI(int);
 bool desconectado (int);
 void enviarOrdenCompactar();
+t_list *instanciasActivas();
 
 
 #endif

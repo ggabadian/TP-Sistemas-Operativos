@@ -23,7 +23,7 @@ int main(void) {
 		return ERROR;
 	}
 
-	instanciasConectadas = list_create();
+	instanciasRegistradas = list_create();
 
 	int listeningSocket = listenSocket(PUERTO);
 
@@ -90,15 +90,9 @@ void crearThread(e_context id, int socket) {
 }
 
 void* threadPlanificador(void* socket) {
-	int socketPlanificador = *(int*)socket;
+	//int socketPlanificador = *(int*)socket;
 
-	while (1) {
-		sleep(20); //para que no coma CPU
-//		int headPlanificador = recibirHead(ePlanificador->socketPlanificador);
-//		hacerAlgo(headPlanificador);
-	}
-
-	close(socketPlanificador);
+	//close(socketPlanificador);
 
 	return NULL;
 }
@@ -156,11 +150,11 @@ void* threadESI(void* socket) {
 				header=recvHead(socketPlanificador);
 				switch (header.context){
 					case okESI:
-						// (if distribuirSet(paqueteSet) == true){
+						if (distribuirSet(paqueteSet)){
 							sendOkESI(socketESI);
-						//} else {
+						} else {
 							//sendAbortESI(socketESI);
-						//}
+						}
 						break;
 					case abortESI:
 						//sendAbortESI(socketESI);
@@ -267,7 +261,7 @@ void registrarInstancia(int socket, char* nombre){
 		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
 
-		list_add(instanciasConectadas,nuevaInstancia);
+		list_add(instanciasRegistradas,nuevaInstancia);
 	} else {
 		// Actualiza el socket
 		instancia->socket = socket;
@@ -280,8 +274,8 @@ t_instancia *instanciaRegistrada(char* nombre){
 	t_instancia *instancia;
 	int index = 0;
 
-	while(index < list_size(instanciasConectadas)){
-		instancia = list_get(instanciasConectadas, index++);
+	while(index < list_size(instanciasRegistradas)){
+		instancia = list_get(instanciasRegistradas, index++);
 		if (!strcmp(nombre, instancia->nombre))
 			return instancia;
 	}
@@ -289,7 +283,7 @@ t_instancia *instanciaRegistrada(char* nombre){
 	return NULL;
 }
 
-void distribuirSet(t_set paquete){
+bool distribuirSet(t_set paquete){
 	t_instancia *instancia;
 
 	//(Pendiente) Verificar si ya se encuentra
@@ -305,7 +299,7 @@ void distribuirSet(t_set paquete){
 	}
 	else {
 		log_error(logCoordinador, "(SET) No se pudo determinar el algoritmo de distribución");
-		return;
+		return false;
 	}
 
 	if(instancia != NULL){
@@ -313,21 +307,23 @@ void distribuirSet(t_set paquete){
 		printf("(Testing) Socket de la instancia elegida: %d\n", instancia->socket);
 		printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
 		enviarSet(instancia, paquete);
+		return true;
 	} else {
 		log_error(logCoordinador, "(SET) No hay ninguna instancia para recibir la solicitud.");
 		free(paquete.valor);
+		return false;
 	}
 }
 
 t_instancia* equitativeLoad(){
-	if (!list_is_empty(instanciasConectadas)){
+	if (!list_is_empty(instanciasRegistradas)){
 		t_instancia *instancia;
 		int auxIndex = indexEquitativeLoad;
 
 		do {
-			instancia= list_get(instanciasConectadas, indexEquitativeLoad ++);
+			instancia= list_get(instanciasRegistradas, indexEquitativeLoad ++);
 			// Si la instancia que eligió era la ultima, vuelve al principio
-			if(!(indexEquitativeLoad < list_size(instanciasConectadas)))
+			if(!(indexEquitativeLoad < list_size(instanciasRegistradas)))
 				indexEquitativeLoad = 0;
 		} while(desconectado(instancia->socket) && !(auxIndex == indexEquitativeLoad));
 
@@ -344,18 +340,18 @@ t_instancia* equitativeLoad(){
 
 t_instancia* leastSpaceUsed(){
 // Como recorre la lista en orden, el desempate por Equitative Load está implícito
-	if (!list_is_empty(instanciasConectadas)){
+	if (!list_is_empty(instanciasRegistradas)){
 		t_instancia *instancia;
 		t_instancia *instanciaElegida;
 		int index = 0;
 
 		do { // (Pendiente) BUG - Rompe si todas las de la lista estan desconectadas
-		instanciaElegida = list_get(instanciasConectadas, index++);
+		instanciaElegida = list_get(instanciasRegistradas, index++);
 		} while(desconectado(instanciaElegida->socket));
 
-		while(index < list_size(instanciasConectadas)){
+		while(index < list_size(instanciasRegistradas)){
 			// Guarda la instancia de ese index y lo incrementa
-			instancia = list_get(instanciasConectadas, index++);
+			instancia = list_get(instanciasRegistradas, index++);
 
 			if (!desconectado(instancia->socket) && (instancia->entradasLibres > instanciaElegida->entradasLibres))
 				// Guarda la nueva instancia con mayor entradas libres como candidata
@@ -371,7 +367,7 @@ t_instancia* keyExplicit(char* clave){
 	int cantidadDeLetras = 26;
 	// Cantidad de letras de las instancias que almacenarán claves (excepto la última)
 	int letrasPorInstancia = 0;
-
+	t_list *instanciasConectadas = instanciasActivas();
 	double division = cantidadDeLetras/(double)list_size(instanciasConectadas);
 
 	// Distribuye apropiadamente la cantidad de letras segun la cantidad de instancias
@@ -406,7 +402,7 @@ void distribuirStore(t_head header, char* clave){ //(Pendiente)
 /*	t_instancia *instancia;
 	//(Pendiente) Analizar a que instancia se va a enviar
 	//Para testear la asigno con EL
-	//instancia = equitativeLoad(instanciasConectadas);
+	//instancia = equitativeLoad(instanciasRegistradas);
 	if(instancia != NULL){
 		enviarStore(instancia, header, clave);
 	} else {
@@ -449,9 +445,23 @@ void enviarOrdenCompactar(){
 	header.context = ORDEN_COMPACTAR;
 	header.mSize = 0;
 
-	while(index < list_size(instanciasConectadas)){
-		instancia = list_get(instanciasConectadas, index++);
+	while(index < list_size(instanciasRegistradas)){
+		instancia = list_get(instanciasRegistradas, index++);
 		if(!desconectado(instancia->socket))
 			sendHead(instancia->socket, header);
 	}
+}
+
+t_list *instanciasActivas(){ // Retorna una lista con las instancias actualmente conectadas
+	t_instancia *instancia;
+	int index = 0;
+	t_list *instanciasConectadas = list_create();
+
+	while(index < list_size(instanciasRegistradas)){
+		instancia = list_get(instanciasRegistradas, index++);
+		if(!desconectado(instancia->socket))
+			list_add(instanciasConectadas, instancia);
+	}
+
+	return instanciasConectadas;
 }
