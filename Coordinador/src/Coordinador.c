@@ -286,7 +286,16 @@ t_instancia *instanciaRegistrada(char* nombre){
 bool distribuirSet(t_set paquete){
 	t_instancia *instancia;
 
-	//(Pendiente) Verificar si ya se encuentra
+	instancia = instanciaConClave(paquete.clave);
+	if(instancia != NULL){
+		if(!desconectado(instancia->socket)){
+			enviarSet(instancia, paquete);
+			return true;
+		} else { // La clave se encuentra en una instancia desconectada
+			//(Pendiente) eliminar clave de instancia
+			return false;
+		}
+	}
 
 	if (!strcmp(ALGORITMO, "EL")) {
 		instancia = equitativeLoad();
@@ -481,4 +490,27 @@ t_list *instanciasActivas(){ // Retorna una lista con las instancias actualmente
 	} else {
 		return NULL;
 	}
+}
+
+t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contiene esa clave
+	if (!list_is_empty(instanciasRegistradas)){
+		t_instancia *instancia;
+		int index = 0;
+
+		while(index < list_size(instanciasRegistradas)){
+			instancia = list_get(instanciasRegistradas, index++);
+			if (claveRegistrada(clave, instancia)) return instancia;
+		}
+		return NULL;
+	} else {
+		return NULL;
+	}
+}
+
+bool claveRegistrada(char *clave, t_instancia *instancia){
+	int index = 0;
+	while(index < list_size(instancia->claves)){
+		if (!strcmp(list_get(instancia->claves, index++), clave)) return true;
+	}
+	return false;
 }
