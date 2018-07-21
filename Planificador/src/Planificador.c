@@ -34,6 +34,9 @@ int main() {
 	if (strcmp(ALGORITMO, "SJF-CD") == 0) {
 		conDesalojo = true;
 	}
+	else{
+		conDesalojo = false;
+	}
 
 	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
@@ -221,24 +224,29 @@ int main() {
 						case blockedESI:
 							recv(i, clave, header.mSize, 0);
 							//(Pendiente) Obtener idESI a partir de su socket
-							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",idESI, clave);
+							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, clave);
 							// Sacar ESI de cola de listos, agregar a cola de bloqueados por la clave
 							hayQuePlanificar=true;
 							proximoESI=NULL;
 							break;
 						case okESI:
-							printf("El ESI %d finalizo su accion correctamente.\n",idESI);
+							printf("El ESI %d finalizo su accion correctamente.\n",running->idESI);
 							break;
 						case terminatedESI:
 							hayQuePlanificar=true;
-							//mas cosas
 							proximoESI=NULL;
+							close(i);
+							printf("El esi %d termino de correr su script. \n",running->idESI);
+							finalizarESI();
+							FD_CLR(i, &master);
 							break;
 						case abortESI:
 							hayQuePlanificar=true;
-							//mas cosas
 							proximoESI=NULL;
+							close(i);
+							printf("El esi %d aborto. \n",running->idESI);
 							finalizarESI();
+							FD_CLR(i,&master);
 							break;
 						default:
 							printf("Error en ESI.\n");
@@ -291,31 +299,26 @@ void agregarESIAColaDeListos(t_ESI *esi) {
 //-------------------------------------------------
 t_ESI *planificar() {
 	t_ESI *esi;
-
-	if (!strcmp(ALGORITMO, "SJF-SD")) {
-		esi = sjfsd();
-	}
+	if(!list_is_empty(listos)){
+		if (!strcmp(ALGORITMO, "SJF-SD")) {
+			puts("se planifica con SJFSD"); //para comprobar
+			esi = sjfsd();
+		}
 //		else if (!strcmp(ALGORITMO, "SJF-CD")) {
 //			esi = sjfcd();
 //		}
 //		else if (!strcmp(ALGORITMO, "HRRN")) {
 //			esi = hrrn();
 //		}
-	else {
-		puts("Error: No se pudo determinar el algoritmo de planificación");
+		else {
+			puts("Error: No se pudo determinar el algoritmo de planificación");
+			return NULL;
+		}
+		return esi;
+	}
+	else{
 		return NULL;
 	}
-	return esi;
-
-//		if(esi != NULL){
-//			//Para testear
-//			printf("(Testing) Socket de la instancia elegida: %d\n", instancia->socket);
-//			printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
-//			sendSet(instancia, paquete);
-//		} else {
-//			puts("Error: No hay ninguna instancia para recibir la solicitud.");
-//		}
-
 }
 
 void estimar() {
@@ -356,10 +359,10 @@ void enviarOrdenDeEjecucion(){
 		header.context=executeESI;
 		header.mSize=0;
 		sendHead(proximoESI->socket,header);
+		clock++;
+		(proximoESI->real)++;
+		running=proximoESI;
 	}
-	clock++;
-	(proximoESI->real)++;
-	running=proximoESI;
 }
 
 void bloquearESI(char* clave){

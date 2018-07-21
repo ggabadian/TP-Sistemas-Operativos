@@ -118,6 +118,7 @@ void* threadESI(void* socket) {
 
 	while (connected) {
 		t_head header = recvHead(socketESI);
+		sleep(RETARDO);
 
 		switch(header.context){
 			case OPERACION_GET:

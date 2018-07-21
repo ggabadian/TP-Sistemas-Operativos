@@ -175,6 +175,10 @@ int main(int argc, char** argv) {
 		printf("\n");
 	}
 
+	header.context=terminatedESI;
+	header.mSize=0;
+	sendHead(planificadorSocket,header);
+
 	fclose(fp);
 	if (line)
 		free(line);
