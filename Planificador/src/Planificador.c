@@ -19,6 +19,7 @@ int main() {
 	bool conDesalojo;
 	clock=0;
 	proximoESI=NULL;
+	running=NULL;
 
 	//creo el logger//puede que haya que ponerla global si se usa en alguna funcion
 	t_log* logPlanificador;
@@ -121,7 +122,7 @@ int main() {
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
 						idESI++;
 						send(socketCliente, &idESI, sizeof(idESI), 0);
-						if(list_is_empty(listos)){
+						if(list_is_empty(listos) && running==NULL){
 							hayQueEnviarOrdenDeEjecucion=true; //cuando se conecta el primer esi, si o si hay que planificar y enviar orden
 							hayQuePlanificar=true;
 						}
@@ -164,7 +165,7 @@ int main() {
 								header.context=blockedESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
-								bloquearESI(paqueteGet.clave);
+								bloquearESI(paqueteGet.clave); //esto solo agrega a la cola de bloqueados
 							}
 
 							break;
@@ -223,11 +224,10 @@ int main() {
 						switch (header.context) {
 						case blockedESI:
 							recv(i, clave, header.mSize, 0);
-							//(Pendiente) Obtener idESI a partir de su socket
 							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, clave);
-							// Sacar ESI de cola de listos, agregar a cola de bloqueados por la clave
 							hayQuePlanificar=true;
 							proximoESI=NULL;
+							running=NULL;
 							break;
 						case okESI:
 							printf("El ESI %d finalizo su accion correctamente.\n",running->idESI);
@@ -237,16 +237,18 @@ int main() {
 							proximoESI=NULL;
 							close(i);
 							printf("El esi %d termino de correr su script. \n",running->idESI);
-							finalizarESI();
+							finalizarESI(); //libera recursos y manda a lista de finalizados
 							FD_CLR(i, &master);
+							running=NULL;
 							break;
 						case abortESI:
 							hayQuePlanificar=true;
 							proximoESI=NULL;
 							close(i);
 							printf("El esi %d aborto. \n",running->idESI);
-							finalizarESI();
+							finalizarESI(); //libera recursos y manda a lista de finalizados
 							FD_CLR(i,&master);
+							running=NULL;
 							break;
 						default:
 							printf("Error en ESI.\n");
@@ -257,9 +259,15 @@ int main() {
 			} // END got new incoming connection
 		} // END looping through file descriptors
 
+		sleep(1);
+
 		if(hayQuePlanificar){
+			printf("hayQuePlanificar==true\n");
 			proximoESI=planificar();
 			hayQuePlanificar=false;
+		}
+		else{
+			printf("hayQuePlanificar==false\n");
 		}
 
 		if(hayQueEnviarOrdenDeEjecucion){
@@ -289,7 +297,7 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 }
 
 void agregarESIAColaDeListos(t_ESI *esi) {
-	esi->estimado = ESTIMACION_I;
+	esi->estimado = (ALFA / 100) * (esi->real) + ((1 - (ALFA / 100)) * esi->estimado);
 	esi->listoDesde = clock;
 	esi->real=0;
 
@@ -321,32 +329,28 @@ t_ESI *planificar() {
 	}
 }
 
-void estimar() {
-	int i;
-	int cantEsisListos = list_size(listos);
-	t_ESI *aux;
-	for (i = 0; i < cantEsisListos; i++) {
-		aux = list_get(listos, i);
-		aux->estimado = (ALFA / 100) * (aux->real) + ((1 - (ALFA / 100)) * aux->estimado);
-	}
-}
 
 t_ESI *sjfsd() {
 	if (!list_is_empty(listos)) {
 		t_ESI *esi;
 		t_ESI *esiElegido;
 		int index = 0;
+		int indexDefinitivo;
 
 		esiElegido = list_get(listos, index++);
+		indexDefinitivo=index-1;
 
 		while (index < list_size(listos)) {
 			// Guarda la instancia de ese index y lo incrementa
 			esi = list_get(listos, index++);
 
-			if (esi->estimado < esiElegido->estimado)
+			if (esi->estimado < esiElegido->estimado){
 				// Guarda la nueva instancia con mayor entradas libres como candidata
 				esiElegido = esi;
+				indexDefinitivo=index-1;
+			}
 		}
+		list_remove(listos,indexDefinitivo);
 		return esiElegido;
 	} else {
 		return NULL;
