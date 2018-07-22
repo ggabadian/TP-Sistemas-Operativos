@@ -259,7 +259,6 @@ int main() {
 			} // END got new incoming connection
 		} // END looping through file descriptors
 
-		sleep(1);
 
 		if(hayQuePlanificar){
 			printf("hayQuePlanificar==true\n");

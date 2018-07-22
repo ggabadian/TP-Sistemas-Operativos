@@ -13,16 +13,15 @@ t_list* TABLA_ENTRADAS;
 
 t_log* LOG_INSTANCIA;
 
-void set(t_set *paqueteSet);
-void store(t_store *paqueteStore);
-bool enviarACoordinador(char* msg);
-bool conectarCoordinador();
-bool recibirDeCoordinador();
-void respuesta();
-void compactar();
-void dumping();
-void finCompactacion();
-void finDumping();
+t_set paqueteSet;
+t_store paqueteStore;
+t_initInstancia paqueteInit;
+int connected;
+
+
+void enviarACoordinador(char* msg);
+void conectarCoordinador();
+void recibirOperacion();
 int main(int argc, char* argv[]);
 
 typedef struct {
