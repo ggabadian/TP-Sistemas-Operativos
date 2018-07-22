@@ -260,6 +260,7 @@ void registrarInstancia(int socket, char* nombre){
 		nuevaInstancia->nombre = nombre;
 		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
+		nuevaInstancia->claves = list_create();
 
 		list_add(instanciasRegistradas,nuevaInstancia);
 	} else {
@@ -407,6 +408,9 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	send(instancia->socket, &paquete, sizeof(paquete), 0);
 
 	instancia->entradasLibres--; //(Pendiente) Guardar clave
+
+	if (!(claveRegistrada(paquete.clave, instancia)))
+		list_add(instancia->claves, paquete.clave);
 
 	free(paquete.valor);
 }
