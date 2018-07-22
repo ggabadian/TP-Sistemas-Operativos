@@ -53,6 +53,7 @@ void recibirOperacion(){
 	case OPERACION_SET:
 		recvSet(SOCKET_COORDINADOR, &paqueteSet);
 		puts("Se recibio un set");
+
 		realizarSet();
 
 	break;

@@ -23,12 +23,13 @@ void enviarACoordinador(char* msg);
 void conectarCoordinador();
 void recibirOperacion();
 int main(int argc, char* argv[]);
+void realizarSet();
 
 typedef struct {
 	char clave[40];
-	char* valor;
+	int posicion;
 	int tamanio;
-	int cantidadOperaciones;
+	int cantidad;
 }datoEntrada;
 
 #endif
