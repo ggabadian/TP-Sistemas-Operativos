@@ -220,11 +220,11 @@ int main() {
 						FD_CLR(i, &master); // remove from master set
 					} else {
 						// we got some data from an ESI
-						char* clave = malloc(header.mSize);
+						//char* clave = malloc(header.mSize); //esto no se por que lo habiamos puesto
 						switch (header.context) {
 						case blockedESI:
-							recv(i, clave, header.mSize, 0);
-							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, clave);
+							//recv(i, clave, header.mSize, 0);
+							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, paqueteGet.clave);
 							hayQuePlanificar=true;
 							proximoESI=NULL;
 							running=NULL;
@@ -381,10 +381,24 @@ void bloquearESI(char* clave){
 }
 
 void finalizarESI(){
-	//liberarRecursos();
+	liberarRecursos();
 	list_add(finalizados, running);
 }
 
+void liberarRecursos(){
+	int table_index;
+	for (table_index = 0; table_index < clavesBloqueadas->table_max_size; table_index++) {
+		t_hash_element *element = clavesBloqueadas->elements[table_index];
+		while (element != NULL) {
+
+			if(*(int*)(element->data)==running->idESI){
+				dictionary_remove(clavesBloqueadas,element->key);
+			}
+
+			element = element->next;
+		}
+	}
+}
 
 void consola() {
 	system("clear");

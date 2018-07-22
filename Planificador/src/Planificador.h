@@ -41,6 +41,7 @@ void estimar();
 void enviarOrdenDeEjecucion();
 void bloquearESI(char*);
 void finalizarESI();
+void liberarRecursos();
 
 
 
