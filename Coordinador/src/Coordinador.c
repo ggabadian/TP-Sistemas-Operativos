@@ -174,14 +174,14 @@ void* threadESI(void* socket) {
 				header=recvHead(socketPlanificador);
 				switch (header.context){
 					case okESI:
-						// (if distribuirStore(paqueteStore) == true){
+						if (distribuirStore(header, paqueteStore.clave)){
 							sendOkESI(socketESI);
-						//} else {
-							//sendAbortESI(socketESI);
-						//}
+						} else {
+							sendAbortESI(socketESI);
+						}
 						break;
 					case abortESI:
-						//sendAbortESI(socketESI);
+						sendAbortESI(socketESI);
 						break;
 					default:
 						break;
@@ -405,26 +405,28 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	header.mSize = sizeof(paquete);
 
 	sendHead(instancia->socket, header);
-	send(instancia->socket, &paquete, sizeof(paquete), 0);
+	sendSet(instancia->socket, &paquete);
 
-	instancia->entradasLibres--; //(Pendiente) Guardar clave
+	instancia->entradasLibres--; //(Pendiente) Guardar clave y no siempre ocupa 1 y ademas la instancia lo va a retornar
 
-	if (!(claveRegistrada(paquete.clave, instancia)))
+	//if (!(claveRegistrada(paquete.clave, instancia)))
+	paquete.clave[40] = '\0';
 		list_add(instancia->claves, paquete.clave);
 
 	free(paquete.valor);
 }
 
-void distribuirStore(t_head header, char* clave){ //(Pendiente)
-/*	t_instancia *instancia;
-	//(Pendiente) Analizar a que instancia se va a enviar
-	//Para testear la asigno con EL
-	//instancia = equitativeLoad(instanciasRegistradas);
+bool distribuirStore(t_head header, char* clave){ //(Pendiente)
+	t_instancia *instancia;
+	instancia = instanciaConClave(clave);
+
 	if(instancia != NULL){
 		enviarStore(instancia, header, clave);
+		return true;
 	} else {
-		puts("Error: No hay ninguna instancia para recibir la solicitud.");
-	}*/
+		puts("Error: No se encontró la instancia con esa clave.");
+		return false;
+	}
 }
 
 void enviarStore(t_instancia *instancia, t_head header, char* clave){
@@ -502,8 +504,10 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 		int index = 0;
 
 		while(index < list_size(instanciasRegistradas)){
-			instancia = list_get(instanciasRegistradas, index++);
-			if (claveRegistrada(clave, instancia)) return instancia;
+			instancia = list_get(instanciasRegistradas, 0);
+			//if (claveRegistrada(clave, instancia)) {
+				return instancia;
+			//}
 		}
 		return NULL;
 	} else {
@@ -511,10 +515,12 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 	}
 }
 
-bool claveRegistrada(char *clave, t_instancia *instancia){
+bool claveRegistrada(char *clave, t_instancia *instancia){ //(Pendiente) Arreglar
 	int index = 0;
+	char unaClave[40];
 	while(index < list_size(instancia->claves)){
-		if (!strcmp(list_get(instancia->claves, index++), clave)) return true;
+	strcpy(unaClave, list_get(instancia->claves, 0));
+		if (!strcmp(unaClave, clave)) return true;
 	}
 	return false;
 }
