@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 #include <commons/log.h>
 #include <math.h>
 
@@ -33,8 +34,9 @@ typedef struct {
 	char* nombre;
 	int socket;
 	int entradasLibres;
-	t_list* claves;
 } t_instancia;
+
+t_dictionary *clavesRegistradas; // CLAVE::INSTANCIA
 
 void crearThread(e_context, int);
 void* threadPlanificador(void*);

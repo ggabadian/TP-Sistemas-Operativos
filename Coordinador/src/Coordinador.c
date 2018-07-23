@@ -24,6 +24,7 @@ int main(void) {
 	}
 
 	instanciasRegistradas = list_create();
+	clavesRegistradas = dictionary_create();
 
 	int listeningSocket = listenSocket(PUERTO);
 
@@ -260,7 +261,7 @@ void registrarInstancia(int socket, char* nombre){
 		nuevaInstancia->nombre = nombre;
 		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
-		nuevaInstancia->claves = list_create();
+		//nuevaInstancia->claves = list_create();
 
 		list_add(instanciasRegistradas,nuevaInstancia);
 	} else {
@@ -409,9 +410,8 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 
 	instancia->entradasLibres--; //(Pendiente) Guardar clave y no siempre ocupa 1 y ademas la instancia lo va a retornar
 
-	//if (!(claveRegistrada(paquete.clave, instancia)))
-	paquete.clave[40] = '\0';
-		list_add(instancia->claves, paquete.clave);
+	if (!(claveRegistrada(paquete.clave, instancia)))
+		dictionary_put(clavesRegistradas, paquete.clave, instancia);
 
 	free(paquete.valor);
 }
@@ -504,10 +504,10 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 		int index = 0;
 
 		while(index < list_size(instanciasRegistradas)){
-			instancia = list_get(instanciasRegistradas, 0);
-			//if (claveRegistrada(clave, instancia)) {
+			instancia = list_get(instanciasRegistradas, index++);
+			if (claveRegistrada(clave, instancia)) {
 				return instancia;
-			//}
+			}
 		}
 		return NULL;
 	} else {
@@ -516,11 +516,5 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 }
 
 bool claveRegistrada(char *clave, t_instancia *instancia){ //(Pendiente) Arreglar
-	int index = 0;
-	char unaClave[40];
-	while(index < list_size(instancia->claves)){
-	strcpy(unaClave, list_get(instancia->claves, 0));
-		if (!strcmp(unaClave, clave)) return true;
-	}
-	return false;
+	return dictionary_get(clavesRegistradas, clave)==instancia;
 }
