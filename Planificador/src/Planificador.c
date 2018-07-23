@@ -7,22 +7,22 @@ t_list *finalizados;
 t_dictionary *clavesBloqueadas;
 
 bool planificacionPausada;
-int clock; //clock del sistema. Se incrementa cada vez que se envia una orden de ejecucion. (cuenta la cantidad total de ordenes enviadas
-					 //tambien sirve para medir el tiempo que un esi lleva esperando en la cola de listos. (debe guardarse en su t_esi y calcular la diferencia)
+int systemClock;	//clock del sistema. Se incrementa cada vez que se envia una orden de ejecucion. (cuenta la cantidad total de ordenes enviadas
+					//tambien sirve para medir el tiempo que un esi lleva esperando en la cola de listos. (debe guardarse en su t_esi y calcular la diferencia)
+
 t_ESI *proximoESI;
 t_ESI *running;
 
 int main() {
 
-	bool hayQuePlanificar=false;
-	bool hayQueEnviarOrdenDeEjecucion=false;
-	bool conDesalojo;
-	clock=0;
-	proximoESI=NULL;
-	running=NULL;
+	int statusConsola, statusMainProgram;
+	pthread_t tConsola, tMainProgram;
 
-	//creo el logger//puede que haya que ponerla global si se usa en alguna funcion
-	t_log* logPlanificador;
+	// Creo las diferentes listas a ser utilizadas
+	listos = list_create();
+	colasBloqueados = dictionary_create(); //se entra por clave y devuelve cola de esis bloqueados en espera de la clave
+	finalizados = list_create();
+	clavesBloqueadas = dictionary_create(); //se entra por clave y devuelve el id del esi que la tiene
 
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	logPlanificador = log_create("../logs/logDePlanificador.log","Planificador", true, LOG_LEVEL_TRACE);
@@ -32,31 +32,12 @@ int main() {
 	// Cargo la configuración del Planificador desde el archivo config
 	cargarConfigPlanificador();
 
-	if (strcmp(ALGORITMO, "SJF-CD") == 0) {
-		conDesalojo = true;
-	}
-	else{
-		conDesalojo = false;
-	}
-
-	// Creo las diferentes listas a ser utilizadas
-	listos = list_create();
-	colasBloqueados = dictionary_create(); //se entra por clave y devuelve cola de esis bloqueados en espera de la clave
-	finalizados = list_create();
-
-
-	clavesBloqueadas = dictionary_create(); //se entra por clave y devuelve el id del esi que la tiene
-
-	t_head headerAEnviar;
-	headerAEnviar.context = PLANIFICADOR;
-	headerAEnviar.mSize = 0;
-
-	log_info(logPlanificador, "PUERTO= %s\n", PUERTO);
-	log_info(logPlanificador, "ALGORITMO= %s\n", ALGORITMO);
-	log_info(logPlanificador, "ALFA= %d\n", ALFA);
-	log_info(logPlanificador, "ESTIMACION= %d\n", ESTIMACION_I);
-	log_info(logPlanificador, "IP COORDINADOR= %s\n", IP_COORDINADOR);
-	log_info(logPlanificador, "PUERTO COORDINADOR= %s\n", PUERTO_COORDINADOR);
+	log_info(logPlanificador, "PUERTO= %s", PUERTO);
+	log_info(logPlanificador, "ALGORITMO= %s", ALGORITMO);
+	log_info(logPlanificador, "ALFA= %d", ALFA);
+	log_info(logPlanificador, "ESTIMACION= %d", ESTIMACION_I);
+	log_info(logPlanificador, "IP COORDINADOR= %s", IP_COORDINADOR);
+	log_info(logPlanificador, "PUERTO COORDINADOR= %s", PUERTO_COORDINADOR);
 
 	//Agrego las claves bloqueadas por archivo configuración a la lista de claves
 	//En la descripción agrego que son por archivo CONFIG ya que después servirá para calular el Deadlock
@@ -65,10 +46,65 @@ int main() {
 		dictionary_put(clavesBloqueadas, CL_BLOQUEADAS[claveI], "POR ARCHIVO CONFIG");
 	}
 
+	//Creo los threads para la consola y el main Program
+	statusConsola = pthread_create(&tConsola, NULL, &consola, NULL);
+	if (statusConsola) {
+		log_error(logPlanificador, "No se pudo crear el thread para la Consola");
+	}
+	if (!statusConsola) {
+		log_info(logPlanificador, "Se crea thread para la consola");
+	}
+
+	statusMainProgram = pthread_create(&tMainProgram, NULL, &mainProgram, NULL);
+	if (statusMainProgram) {
+		log_error(logPlanificador, "No se pudo crear el thread para el main program");
+	}
+	if (!statusMainProgram) {
+		log_info(logPlanificador, "Se crea thread para el main program");
+	}
+
+	pthread_join(tConsola, NULL);
+	pthread_join(tMainProgram, NULL);
+
+
+	return 0;
+}
+
+//************* FUNCIONES *******************
+
+void *mainProgram() {
+
+	bool hayQuePlanificar=false;
+	bool hayQueEnviarOrdenDeEjecucion=false;
+	bool conDesalojo;
+	systemClock=0;
+	proximoESI=NULL;
+	running=NULL;
+
+	if (strcmp(ALGORITMO, "SJF-CD") == 0) {
+		conDesalojo = true;
+	}
+	else{
+		conDesalojo = false;
+	}
+
+//	// Creo las diferentes listas a ser utilizadas
+//	listos = list_create();
+//	colasBloqueados = dictionary_create(); //se entra por clave y devuelve cola de esis bloqueados en espera de la clave
+//	finalizados = list_create();
+//
+//	clavesBloqueadas = dictionary_create(); //se entra por clave y devuelve el id del esi que la tiene
+
+	t_head headerAEnviar;
+	headerAEnviar.context = PLANIFICADOR;
+	headerAEnviar.mSize = 0;
+
+	//Me conecto al Coordinador
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
 	printf("Conectado a Coordinador. \n");
 	sendHead(coordinadorSocket, headerAEnviar); // Le aviso al Coordinador que soy el Planificador
 
+	//Creo socket para escuchar conexiones de ESIs entrantes
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
 
@@ -278,26 +314,24 @@ int main() {
 
 	close(listeningSocket);
 	log_destroy(logPlanificador);
-//	consola();
 
-	return 0;
+
+	return NULL;
 }
-
-//************* FUNCIONES *******************
 
 void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	t_ESI *nuevoESI = malloc(sizeof(t_ESI));
 	nuevoESI->idESI = id;
 	nuevoESI->socket = socketESI;
 	nuevoESI->estimado = ESTIMACION_I;
-	nuevoESI->listoDesde = clock;
+	nuevoESI->listoDesde = systemClock;
 
 	list_add(listos, nuevoESI);
 }
 
 void agregarESIAColaDeListos(t_ESI *esi) {
 	esi->estimado = (ALFA / 100) * (esi->real) + ((1 - (ALFA / 100)) * esi->estimado);
-	esi->listoDesde = clock;
+	esi->listoDesde = systemClock;
 	esi->real=0;
 
 	list_add(listos, esi);
@@ -362,7 +396,7 @@ void enviarOrdenDeEjecucion(){
 		header.context=executeESI;
 		header.mSize=0;
 		sendHead(proximoESI->socket,header);
-		clock++;
+		systemClock++;
 		(proximoESI->real)++;
 		running=proximoESI;
 	}
@@ -399,76 +433,80 @@ void liberarRecursos(){
 	}
 }
 
-void consola() {
-	system("clear");
-	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
-	puts("1) Pausar / Continuar");
-	puts("2) Bloquear (Clave, ID)");
-	puts("3) Desbloquear (Clave)");
-	puts("4) Listar (Recurso)");
-	puts("5) Kill (ID)");
-	puts("6) Status (Clave)");
-	puts("7) Deadlock");
-	printf("Ingrese Nro de comando: ");
-	int opcion;
-	//char* clave;
-	//char* id;
-	//char* recurso;
-	scanf("%d", &opcion);
+void *consola() {
 
-	switch (opcion) {
-	case 1:
-		system("clear");
-		puts("PAUSAR / CONTINUAR");
-		printf("Oprima 'P' para Pausar o 'C' para Continuar: ");
-		scanf("%d", &opcion);
-		if (opcion == 'P')
-			printf("\n\nSe eligió Pausar");
-		if (opcion == 'C')
-			printf("\n\nSe eleigió Continuar");
-		else
-			printf("\n\nOpcion incorrecta");
-		break;
+	sleep(1);
+//	system("clear");
+//	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
+//	puts("1) Pausar / Continuar");
+//	puts("2) Bloquear (Clave, ID)");
+//	puts("3) Desbloquear (Clave)");
+//	puts("4) Listar (Recurso)");
+//	puts("5) Kill (ID)");
+//	puts("6) Status (Clave)");
+//	puts("7) Deadlock");
+//	printf("Ingrese Nro de comando: ");
+//	int opcion;
+//	//char* clave;
+//	//char* id;
+//	//char* recurso;
+//	scanf("%d", &opcion);
+//
+//	switch (opcion) {
+//	case 1:
+//		system("clear");
+//		puts("PAUSAR / CONTINUAR");
+//		printf("Oprima 'P' para Pausar o 'C' para Continuar: ");
+//		scanf("%d", &opcion);
+//		if (opcion == 'P')
+//			printf("\n\nSe eligió Pausar");
+//		if (opcion == 'C')
+//			printf("\n\nSe eleigió Continuar");
+//		else
+//			printf("\n\nOpcion incorrecta");
+//		break;
+//
+//	case 2:
+//		system("clear");
+//		puts("BLOQUEAR");
+//		printf("Inserte Clave: ");
+//		//scanf("%s", clave);
+//		printf("\nInserte ID: ");
+//		//scanf("%s", id);
+//		break;
+//
+//	case 3:
+//		system("clear");
+//		puts("DESBLOQUEAR");
+//		printf("Inserte Clave: ");
+//		//scanf("%s", clave);
+//		break;
+//
+//	case 4:
+//		system("clear");
+//		puts("LISTAR");
+//		printf("Inserte Recurso: ");
+//		//scanf("%s", recurso);
+//		break;
+//
+//	case 5:
+//		system("clear");
+//		puts("KILL");
+//		printf("Escriba el ID del proceso a matar: ");
+//		//scanf("%s", id);
+//		break;
+//
+//	case 6:
+//		system("clear");
+//		puts("STATUS");
+//		printf("El algoritmo que está corriendo es: ");
+//		break;
+//
+//	case 7:
+//		system("clear");
+//		puts("Los deadlocks existentes son:");
+//		break;
+//	}
 
-	case 2:
-		system("clear");
-		puts("BLOQUEAR");
-		printf("Inserte Clave: ");
-		//scanf("%s", clave);
-		printf("\nInserte ID: ");
-		//scanf("%s", id);
-		break;
-
-	case 3:
-		system("clear");
-		puts("DESBLOQUEAR");
-		printf("Inserte Clave: ");
-		//scanf("%s", clave);
-		break;
-
-	case 4:
-		system("clear");
-		puts("LISTAR");
-		printf("Inserte Recurso: ");
-		//scanf("%s", recurso);
-		break;
-
-	case 5:
-		system("clear");
-		puts("KILL");
-		printf("Escriba el ID del proceso a matar: ");
-		//scanf("%s", id);
-		break;
-
-	case 6:
-		system("clear");
-		puts("STATUS");
-		printf("El algoritmo que está corriendo es: ");
-		break;
-
-	case 7:
-		system("clear");
-		puts("Los deadlocks existentes son:");
-		break;
-	}
+	return NULL;
 }

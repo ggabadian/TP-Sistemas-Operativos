@@ -7,12 +7,19 @@
 #include "../../libs/socketServer.h"
 #include "../../libs/socketClient.h"
 #include "../../libs/protocolo.h"
+#include <pthread.h>
 #include <commons/collections/list.h>
 #include <commons/collections/queue.h>
 #include <commons/collections/dictionary.h>
 
 #define BACKLOG 5				//(Pendiente) Carga desde config
 #define PACKAGESIZE 1024
+
+//********** VARIABLES **********
+
+t_log* logPlanificador; //Creo el logger
+
+
 
 //********** ESTRUCTURAS **********
 
@@ -33,7 +40,8 @@ typedef struct {
 
 //********** FUNCIONES **********
 
-void consola();
+void *consola();
+void *mainProgram();
 void agregarNuevoESIAColaDeListos(int, int);
 t_ESI *planificar ();
 t_ESI *sjfsd();
