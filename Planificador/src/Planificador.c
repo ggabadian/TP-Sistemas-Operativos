@@ -195,8 +195,8 @@ int main() {
 									paqueteStore.clave, paqueteStore.idESI);
 
 							// verificar si la solicitud es valida
-							if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
-								dictionary_remove(clavesBloqueadas,paqueteSet.clave);
+							if (*(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
+								dictionary_remove(clavesBloqueadas,paqueteStore.clave);
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);

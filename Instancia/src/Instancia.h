@@ -37,6 +37,7 @@ typedef struct {
 	char clave[40];
 	int posicion;
 	int tamanio;
+	int cantidadUtilizada;
 	int cantidadReferencias;
 }datoEntrada;
 

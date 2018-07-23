@@ -175,7 +175,7 @@ void* threadESI(void* socket) {
 				header=recvHead(socketPlanificador);
 				switch (header.context){
 					case okESI:
-						if (distribuirStore(header, paqueteStore.clave)){
+						if (distribuirStore(paqueteStore)){
 							sendOkESI(socketESI);
 						} else {
 							sendAbortESI(socketESI);
@@ -416,12 +416,17 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	free(paquete.valor);
 }
 
-bool distribuirStore(t_head header, char* clave){ //(Pendiente)
+bool distribuirStore(t_store paquete){ //(Pendiente)
 	t_instancia *instancia;
-	instancia = instanciaConClave(clave);
+	t_head header;
+	instancia = instanciaConClave(paquete.clave);
+
+	header.context = OPERACION_STORE;
+	header.mSize = sizeof(t_store);
 
 	if(instancia != NULL){
-		enviarStore(instancia, header, clave);
+		sendHead(instancia->socket, header);
+		send(instancia->socket, &paquete, sizeof(paquete), 0);
 		return true;
 	} else {
 		puts("Error: No se encontró la instancia con esa clave.");
@@ -429,9 +434,9 @@ bool distribuirStore(t_head header, char* clave){ //(Pendiente)
 	}
 }
 
-void enviarStore(t_instancia *instancia, t_head header, char* clave){
+void enviarStore(t_instancia *instancia, t_head header, t_store paquete){
 	sendHead(instancia->socket, header);
-	send(instancia->socket, clave, header.mSize, 0);
+	send(instancia->socket, &paquete, header.mSize, 0);
 }
 
 void sendBlockedESI(int socketESI){

@@ -49,21 +49,22 @@ void recibirOperacion(){
 		TABLA_ENTRADAS = list_create();
 		ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
 		puts("Se recibio el init");
-	break;
+		break;
 	case OPERACION_SET:
 		recvSet(SOCKET_COORDINADOR, &paqueteSet);
+		printf("test: %s\n", paqueteSet.valor);
 		puts("Se recibio un set");
 		realizarSet(entradasNecesarias(paqueteSet.valor));
-	break;
+		break;
 	case OPERACION_STORE:
 		recv(SOCKET_COORDINADOR, &paqueteStore, header.mSize, 0);
 		realizarStore(paqueteStore.clave);
 		puts("Se recibio un store");
-	break;
+		break;
 	case ERROR_HEAD:
 		connected = 0;
 		//procesa error
-	break;
+		break;
 	default:
 		puts("Se desconoce el error");
 		break;
