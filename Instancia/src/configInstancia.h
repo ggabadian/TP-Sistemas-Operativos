@@ -13,6 +13,7 @@
 #include <commons/string.h>
 #include <commons/log.h>
 #include <commons/config.h>
+#include <commons/bitarray.h>
 #include <commons/collections/list.h>
 #include <math.h>
 
