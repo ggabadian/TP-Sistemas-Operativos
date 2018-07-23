@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 #include <commons/log.h>
 #include <math.h>
 
@@ -33,8 +34,9 @@ typedef struct {
 	char* nombre;
 	int socket;
 	int entradasLibres;
-	t_list* claves;
-} __attribute__((packed)) t_instancia;
+} t_instancia;
+
+t_dictionary *clavesRegistradas; // CLAVE::INSTANCIA
 
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
@@ -49,7 +51,7 @@ t_instancia* equitativeLoad();
 t_instancia* leastSpaceUsed();
 t_instancia* keyExplicit(char*);
 void enviarSet(t_instancia*, t_set);
-void distribuirStore(t_head, char*);
+bool distribuirStore(t_head, char*);
 void enviarStore(t_instancia*, t_head, char*);
 void sendBlockedESI(int);
 void sendOkESI(int);

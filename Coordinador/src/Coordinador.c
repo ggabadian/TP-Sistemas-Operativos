@@ -24,6 +24,7 @@ int main(void) {
 	}
 
 	instanciasRegistradas = list_create();
+	clavesRegistradas = dictionary_create();
 
 	int listeningSocket = listenSocket(PUERTO);
 
@@ -174,14 +175,14 @@ void* threadESI(void* socket) {
 				header=recvHead(socketPlanificador);
 				switch (header.context){
 					case okESI:
-						// (if distribuirStore(paqueteStore) == true){
+						if (distribuirStore(header, paqueteStore.clave)){
 							sendOkESI(socketESI);
-						//} else {
-							//sendAbortESI(socketESI);
-						//}
+						} else {
+							sendAbortESI(socketESI);
+						}
 						break;
 					case abortESI:
-						//sendAbortESI(socketESI);
+						sendAbortESI(socketESI);
 						break;
 					default:
 						break;
@@ -260,7 +261,7 @@ void registrarInstancia(int socket, char* nombre){
 		nuevaInstancia->nombre = nombre;
 		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
-		nuevaInstancia->claves = list_create();
+		//nuevaInstancia->claves = list_create();
 
 		list_add(instanciasRegistradas,nuevaInstancia);
 	} else {
@@ -405,26 +406,27 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	header.mSize = sizeof(paquete);
 
 	sendHead(instancia->socket, header);
-	send(instancia->socket, &paquete, sizeof(paquete), 0);
+	sendSet(instancia->socket, &paquete);
 
-	instancia->entradasLibres--; //(Pendiente) Guardar clave
+	instancia->entradasLibres--; //(Pendiente) Guardar clave y no siempre ocupa 1 y ademas la instancia lo va a retornar
 
 	if (!(claveRegistrada(paquete.clave, instancia)))
-		list_add(instancia->claves, paquete.clave);
+		dictionary_put(clavesRegistradas, paquete.clave, instancia);
 
 	free(paquete.valor);
 }
 
-void distribuirStore(t_head header, char* clave){ //(Pendiente)
-/*	t_instancia *instancia;
-	//(Pendiente) Analizar a que instancia se va a enviar
-	//Para testear la asigno con EL
-	//instancia = equitativeLoad(instanciasRegistradas);
+bool distribuirStore(t_head header, char* clave){ //(Pendiente)
+	t_instancia *instancia;
+	instancia = instanciaConClave(clave);
+
 	if(instancia != NULL){
 		enviarStore(instancia, header, clave);
+		return true;
 	} else {
-		puts("Error: No hay ninguna instancia para recibir la solicitud.");
-	}*/
+		puts("Error: No se encontró la instancia con esa clave.");
+		return false;
+	}
 }
 
 void enviarStore(t_instancia *instancia, t_head header, char* clave){
@@ -503,7 +505,9 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 
 		while(index < list_size(instanciasRegistradas)){
 			instancia = list_get(instanciasRegistradas, index++);
-			if (claveRegistrada(clave, instancia)) return instancia;
+			if (claveRegistrada(clave, instancia)) {
+				return instancia;
+			}
 		}
 		return NULL;
 	} else {
@@ -511,10 +515,6 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 	}
 }
 
-bool claveRegistrada(char *clave, t_instancia *instancia){
-	int index = 0;
-	while(index < list_size(instancia->claves)){
-		if (!strcmp(list_get(instancia->claves, index++), clave)) return true;
-	}
-	return false;
+bool claveRegistrada(char *clave, t_instancia *instancia){ //(Pendiente) Arreglar
+	return dictionary_get(clavesRegistradas, clave)==instancia;
 }
