@@ -25,6 +25,9 @@ char* identificar(e_context id) {
 		case PLANIFICADOR:
 			return "Planificador";
 			break;
+		case CONSOLA:
+			return "Consola";
+			break;
 		case ESI:
 			return "ESI";
 			break;

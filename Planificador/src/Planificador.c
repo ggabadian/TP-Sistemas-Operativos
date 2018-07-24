@@ -313,6 +313,7 @@ void *mainProgram() {
 	} // END for(;;)--and you thought it would never end!
 
 	close(listeningSocket);
+	close(coordinadorSocket); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
 	log_destroy(logPlanificador);
 
 
@@ -435,7 +436,36 @@ void liberarRecursos(){
 
 void *consola() {
 
-	sleep(1);
+	t_head headerAEnviar;
+	headerAEnviar.context = CONSOLA;
+	headerAEnviar.mSize = 0;
+
+	//Me conecto al Coordinador
+	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
+	log_trace(logPlanificador, "Consola conectada al Coordinador");
+	sendHead(coordinadorSocket, headerAEnviar); // Le aviso al Coordinador que soy la consola del Planificador
+
+	headerAEnviar.context = statusClave;
+	headerAEnviar.mSize = 0;
+	sendHead(coordinadorSocket, headerAEnviar); // Le pido al Coordinador el comando Status Clave
+
+	t_head header = recvHead(coordinadorSocket);
+	if (header.context == okRecibido) {
+		header.context = cerrarConexion;
+		header.mSize = 0;
+		sendHead(coordinadorSocket, header);
+		log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
+	}
+
+	sleep(2);
+
+	int conexion = close(coordinadorSocket); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
+	if (!conexion) {
+		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
+	} else {
+		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador no se cerró satisfactoriamente");
+	}
+
 //	system("clear");
 //	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
 //	puts("1) Pausar / Continuar");

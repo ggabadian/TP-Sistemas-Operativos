@@ -23,6 +23,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 t_list *instanciasRegistradas;
 
 int socketPlanificador = 0;
+int socketConsola = 0;
 
 // Esto registra el indice de la ultima instancia elegida
 int indexEquitativeLoad = 0;
@@ -40,6 +41,7 @@ t_dictionary *clavesRegistradas; // CLAVE::INSTANCIA
 
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
+void* threadConsola(void*);
 void* threadESI(void*);
 void* threadInstancia(void*);
 void recibirMensaje(int);

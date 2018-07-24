@@ -47,6 +47,11 @@ int main(void) {
 		if (identificador.context == PLANIFICADOR){
 			socketPlanificador = socketCliente;
 		}
+
+		if (identificador.context == CONSOLA){
+			socketConsola = socketCliente;
+		}
+
 		crearThread(identificador.context, socketCliente);
 	}
 
@@ -63,6 +68,7 @@ void crearThread(e_context id, int socket) {
 	int statusPlanificador = 1;
 	int statusESI = 1;
 	int statusInstancia = 1;
+	int statusConsola = 1;
 
 	switch(id){
 	case PLANIFICADOR:
@@ -85,6 +91,12 @@ void crearThread(e_context id, int socket) {
 		}
 
 		break;
+	case CONSOLA:
+		statusConsola = pthread_create(&thread, NULL, &threadConsola, &socket);
+		if (statusConsola) {
+			log_error(logCoordinador, "No se pudo crear el thread para la Consola");
+		}
+		break;
 	default:
 		log_error(logCoordinador, "No se pudo crear thread: La conexión es desconocida");
 	}
@@ -94,6 +106,38 @@ void* threadPlanificador(void* socket) {
 	//int socketPlanificador = *(int*)socket;
 
 	//close(socketPlanificador);
+
+	return NULL;
+}
+
+void* threadConsola(void* socket) {
+	int socketConsola = *(int*)socket;
+	int connected = 1;
+
+	while (connected) {
+		t_head header = recvHead(socketConsola);
+
+		switch (header.context){
+			case statusClave:
+				log_trace(logCoordinador, "Se recibió el pedido 'status clave' desde la consola");
+				header.context = okRecibido;
+				header.mSize = 0;
+				sendHead(socketConsola, header);
+				break;
+
+			case cerrarConexion:
+				log_trace(logCoordinador, "Se recibió la orden de cerrar la conexión");
+				connected = 0;
+				break;
+
+			default:
+				break;
+		}
+	}
+
+
+	close(socketConsola);
+	log_trace(logCoordinador, "Se cerró la conexión con la consola");
 
 	return NULL;
 }

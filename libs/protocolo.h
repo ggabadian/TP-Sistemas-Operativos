@@ -15,6 +15,11 @@ typedef enum {
 	PLANIFICADOR,
 	executeESI,
 
+	CONSOLA,
+	statusClave,
+	okRecibido, //Este header es sólo para probar la comunicación. Despúes deaparece.
+	cerrarConexion, //Este header es sólo para probar la comunicación. Despúes deaparece.
+
 	ESI,
 	blockedESI,
 	okESI,
