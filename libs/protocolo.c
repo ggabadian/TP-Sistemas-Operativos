@@ -42,7 +42,7 @@ char* identificar(e_context id) {
 // Antes de recibir un mensaje se debe recibir el HEAD
 t_head recvHead(int socket){
 	t_head head;
-	if ((recv(socket, &head, sizeof(t_head), 0)) <= 0){
+	if ((recv(socket, &head, sizeof(t_head), MSG_WAITALL)) <= 0){
 		head.context = ERROR_HEAD;
 		head.mSize = 0;
 		return head;
@@ -59,17 +59,17 @@ void sendHead(int socket, t_head head){
 int recvSet(int socket, t_set *paqueteSet){
 	int status;
 
-	status = recv(socket, paqueteSet->clave, sizeof(paqueteSet->clave), 0);
+	status = recv(socket, paqueteSet->clave, sizeof(paqueteSet->clave), MSG_WAITALL);
 	if (!status) return 0;
 
-	status = recv(socket, &(paqueteSet->sizeValor), sizeof(paqueteSet->sizeValor), 0);
+	status = recv(socket, &(paqueteSet->sizeValor), sizeof(paqueteSet->sizeValor), MSG_WAITALL);
 	if (!status) return 0;
 
 	paqueteSet->valor = malloc(paqueteSet->sizeValor);
-	status = recv(socket, paqueteSet->valor, paqueteSet->sizeValor, 0);
+	status = recv(socket, paqueteSet->valor, paqueteSet->sizeValor, MSG_WAITALL);
 	if (!status) return 0;
 
-	status = recv(socket, &(paqueteSet->idESI), sizeof(paqueteSet->idESI), 0);
+	status = recv(socket, &(paqueteSet->idESI), sizeof(paqueteSet->idESI), MSG_WAITALL);
 	if (!status) return 0;
 
 	return status;

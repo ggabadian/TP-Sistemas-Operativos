@@ -259,7 +259,9 @@ void* threadInstancia(void* socket) {
 		nombreDeInstancia = malloc(header.mSize + 1);
 		recv(socketInstancia, nombreDeInstancia, header.mSize, 0);
 		nombreDeInstancia[header.mSize] = '\0';
+		// inicio mutexInstanciasRegistradas
 		registrarInstancia(socketInstancia, nombreDeInstancia);
+		// fin mutexInstanciasRegistradas
 	} else {
 		log_error(logCoordinador, "(INSTANCIA) No se recibió el nombre");
 		return NULL;
@@ -271,6 +273,16 @@ void* threadInstancia(void* socket) {
 			case ORDEN_COMPACTAR:
 				enviarOrdenCompactar(); // Envia la orden de compactar a todas las instancias
 				break;
+//			case NRO_ENTRADAS:
+//				recv() entradasInstancia;
+//				instancia = instanciaConSocket(socket);
+//				instancia->entradasLibres = entradasInstancia;
+//				break;
+//			case FIN_COMPACTAR:
+//				//inicio mutex
+//				instanciasCompactando --;
+//				//fin mutex
+//				break;
 			default:
 				break;
 		}
@@ -341,19 +353,25 @@ bool distribuirSet(t_set paquete){
 			enviarSet(instancia, paquete);
 			return true;
 		} else { // La clave se encuentra en una instancia desconectada
-			//(Pendiente) eliminar clave de instancia
+			dictionary_remove(clavesRegistradas, paquete.clave);
 			return false;
 		}
 	}
 
 	if (!strcmp(ALGORITMO, "EL")) {
+		// inicio mutexInstanciasRegistradas
 		instancia = equitativeLoad();
+		// fin mutexInstanciasRegistradas
 	}
 	else if (!strcmp(ALGORITMO, "LSU")) {
+		// inicio mutexInstanciasRegistradas
 		instancia = leastSpaceUsed();
+		// fin mutexInstanciasRegistradas
 	}
 	else if (!strcmp(ALGORITMO, "KE")) {
+		// inicio mutexInstanciasRegistradas
 		instancia = keyExplicit(paquete.clave);
+		// fin mutexInstanciasRegistradas
 	}
 	else {
 		log_error(logCoordinador, "(SET) No se pudo determinar el algoritmo de distribución");
@@ -455,7 +473,7 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	sendHead(instancia->socket, header);
 	sendSet(instancia->socket, &paquete);
 
-	instancia->entradasLibres--; //(Pendiente) Guardar clave y no siempre ocupa 1 y ademas la instancia lo va a retornar
+	instancia->entradasLibres--; //(Pendiente) Sacar
 
 	if (!(claveRegistrada(paquete.clave, instancia)))
 		dictionary_put(clavesRegistradas, paquete.clave, instancia);
@@ -463,7 +481,7 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	free(paquete.valor);
 }
 
-bool distribuirStore(t_store paquete){ //(Pendiente)
+bool distribuirStore(t_store paquete){
 	t_instancia *instancia;
 	t_head header;
 	instancia = instanciaConClave(paquete.clave);
@@ -525,11 +543,19 @@ void enviarOrdenCompactar(){
 	header.context = ORDEN_COMPACTAR;
 	header.mSize = 0;
 
+	//enviar ORDEN_COMPACTAR al planificador
+
 	while(index < list_size(instanciasRegistradas)){
 		instancia = list_get(instanciasRegistradas, index++);
-		if(!desconectado(instancia->socket))
+		if(!desconectado(instancia->socket)){
+			//instanciasCompactando++;
 			sendHead(instancia->socket, header);
+		}
 	}
+
+	//while(instanciasCompactando > 0) sleep(1); // Se bloquea hasta que terminen de compactar
+
+	//enviar FIN_COMPACTAR al planificador
 }
 
 t_list *instanciasActivas(){ // Retorna una lista con las instancias actualmente conectadas
@@ -567,6 +593,6 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 	}
 }
 
-bool claveRegistrada(char *clave, t_instancia *instancia){ //(Pendiente) Arreglar
+bool claveRegistrada(char *clave, t_instancia *instancia){
 	return dictionary_get(clavesRegistradas, clave)==instancia;
 }
