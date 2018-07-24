@@ -185,23 +185,32 @@ void *mainProgram() {
 							recv(i, &paqueteGet, header.mSize, 0);
 							printf("Se recibió un GET <%s> del ESI %d \n",paqueteGet.clave, paqueteGet.idESI);
 
+
+
 							// verificar si la solicitud es valida
 							if (dictionary_get(clavesBloqueadas,paqueteGet.clave) == NULL) { //nadie tiene tomada la clave
-								dictionary_put(clavesBloqueadas,paqueteGet.clave, &paqueteGet.idESI);
+								uint32_t* a = malloc(sizeof(uint32_t));
+								*a = paqueteGet.idESI;
+								dictionary_put(clavesBloqueadas,paqueteGet.clave, a);
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
+								printf("Nadie tenia tomada la clave, se aprueba el GET\n");
+								printf("Se entrego la clave %s al ESI %d\n",paqueteGet.clave,*(int*)dictionary_get(clavesBloqueadas,paqueteGet.clave));
 
-							} else if (*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave)) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
+							} else if ((*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave))) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
+								printf("ID anterior: %d\nID Nuevo: %d\n\n",(*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave))),paqueteGet.idESI);
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
+								printf("El ESI ya tenia tomada la clave, se aprueba el GET\n");
 
 							} else { // otro esi tiene bloqueada la clave
 								header.context=blockedESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
 								bloquearESI(paqueteGet.clave); //esto solo agrega a la cola de bloqueados
+								printf("Otro ESI tenia tomada la clave, se bloquea el ESI\n");
 							}
 
 							break;
@@ -213,7 +222,7 @@ void *mainProgram() {
 									paqueteSet.valor,
 									paqueteSet.idESI);
 							// verificar si la solicitud es valida
-							if (*(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
+							if ((dictionary_get(clavesBloqueadas,paqueteSet.clave))!=NULL && *(int*) (dictionary_get(clavesBloqueadas,paqueteSet.clave)) == paqueteSet.idESI) { //el esi que pide es el que tiene tomada la clave
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
@@ -231,7 +240,7 @@ void *mainProgram() {
 									paqueteStore.clave, paqueteStore.idESI);
 
 							// verificar si la solicitud es valida
-							if (*(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
+							if ((dictionary_get(clavesBloqueadas,paqueteStore.clave)!=NULL) && *(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
 								dictionary_remove(clavesBloqueadas,paqueteStore.clave);
 								header.context=okESI;
 								header.mSize=0;
@@ -240,6 +249,7 @@ void *mainProgram() {
 								//si es con desalojo y se desbloquea un esi, hay que replanificar
 
 							} else { //otro esi tiene bloqueada la clave o no la tiene nadie
+								printf("hay que abortar al esi por hacer un STORE que no corresponde\n");
 								header.context=abortESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
@@ -421,7 +431,8 @@ void finalizarESI(){
 
 void liberarRecursos(){
 	int table_index;
-	for (table_index = 0; table_index < clavesBloqueadas->table_max_size; table_index++) {
+	int tableSize = clavesBloqueadas->table_max_size;
+	for (table_index = 0; table_index < tableSize; table_index++) {
 		t_hash_element *element = clavesBloqueadas->elements[table_index];
 		while (element != NULL) {
 
@@ -441,25 +452,29 @@ void *consola() {
 	headerAEnviar.mSize = 0;
 
 	//Me conecto al Coordinador
-	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
+	int coordinadorSocketConsola = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador //Lo llamo distinto al global por las dudas
+	sendHead(coordinadorSocketConsola, headerAEnviar); // Le aviso al Coordinador que soy la consola del Planificador
 	log_trace(logPlanificador, "Consola conectada al Coordinador");
-	sendHead(coordinadorSocket, headerAEnviar); // Le aviso al Coordinador que soy la consola del Planificador
 
 	headerAEnviar.context = statusClave;
 	headerAEnviar.mSize = 0;
-	sendHead(coordinadorSocket, headerAEnviar); // Le pido al Coordinador el comando Status Clave
+	sendHead(coordinadorSocketConsola, headerAEnviar); // Le pido al Coordinador el comando Status Clave
+	log_trace(logPlanificador, "Se envió pedido de status clave");
 
-	t_head header = recvHead(coordinadorSocket);
+
+	t_head header = recvHead(coordinadorSocketConsola);
+
 	if (header.context == okRecibido) {
+		log_trace(logPlanificador, "Se recibio el ok");
 		header.context = cerrarConexion;
 		header.mSize = 0;
-		sendHead(coordinadorSocket, header);
+		sendHead(coordinadorSocketConsola, header);
 		log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
 	}
 
-	sleep(2);
+	//sleep(1);
 
-	int conexion = close(coordinadorSocket); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
+	int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
 	if (!conexion) {
 		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
 	} else {

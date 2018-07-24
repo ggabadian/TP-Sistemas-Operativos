@@ -36,7 +36,7 @@ int main(void) {
 		t_head identificador;
 
 		int socketCliente = acceptSocket(listeningSocket);
-
+		//sleep(1);
 		identificador = recvHead(socketCliente);
 		if (identificador.context == ERROR_HEAD) {
 			log_error(logCoordinador, "(HANDSHAKE) No se pudo identificar a la entidad. Conexión desconocida.\n");
@@ -70,29 +70,32 @@ void crearThread(e_context id, int socket) {
 	int statusInstancia = 1;
 	int statusConsola = 1;
 
+	int* sockfd =malloc(sizeof(int));
+	*sockfd = socket;
+
 	switch(id){
 	case PLANIFICADOR:
-		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador, &socket);
+		statusPlanificador = pthread_create(&thread, NULL, &threadPlanificador, sockfd);
 		if (statusPlanificador) {
 			log_error(logCoordinador, "No se pudo crear el thread para Planificador");
 		}
 		break;
 	case ESI:
-		statusESI = pthread_create(&thread, NULL, &threadESI, &socket);
+		statusESI = pthread_create(&thread, NULL, &threadESI, sockfd);
 
 		if (statusESI) {
 			log_error(logCoordinador, "No se pudo crear el thread para ESI");
 		}
 		break;
 	case INSTANCIA:
-		statusInstancia = pthread_create(&thread, NULL, &threadInstancia, &socket);
+		statusInstancia = pthread_create(&thread, NULL, &threadInstancia, sockfd);
 		if (statusInstancia) {
 			log_error(logCoordinador, "No se pudo crear el thread para Instancia");
 		}
 
 		break;
 	case CONSOLA:
-		statusConsola = pthread_create(&thread, NULL, &threadConsola, &socket);
+		statusConsola = pthread_create(&thread, NULL, &threadConsola, sockfd);
 		if (statusConsola) {
 			log_error(logCoordinador, "No se pudo crear el thread para la Consola");
 		}
