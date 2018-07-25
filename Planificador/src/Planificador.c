@@ -211,6 +211,7 @@ void *mainProgram() {
 								sendHead(coordinadorSocket,header);
 								bloquearESI(paqueteGet.clave); //esto solo agrega a la cola de bloqueados
 								printf("Otro ESI tenia tomada la clave, se bloquea el ESI\n");
+								//hayQueplanificar se setea cuando el esi retorna
 							}
 
 							break;
@@ -232,7 +233,8 @@ void *mainProgram() {
 								sendHead(coordinadorSocket,header);
 							}
 
-							//Usar donde corresponda: free(paqueteSet.valor);
+							//Usar donde corresponda:
+							free(paqueteSet.valor);
 							break;
 						case OPERACION_STORE:
 							recv(i, &paqueteStore, header.mSize, 0);
@@ -241,12 +243,14 @@ void *mainProgram() {
 
 							// verificar si la solicitud es valida
 							if ((dictionary_get(clavesBloqueadas,paqueteStore.clave)!=NULL) && *(int*) (dictionary_get(clavesBloqueadas,paqueteStore.clave)) == paqueteStore.idESI) { //el esi que pide es el que tiene tomada la clave
-								dictionary_remove(clavesBloqueadas,paqueteStore.clave);
+								dictionary_remove_and_destroy(clavesBloqueadas,paqueteStore.clave,free);
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
-								//cuando se hace un store hay que pasar a ready el primer esi encolado en espera de esa clave
-								//si es con desalojo y se desbloquea un esi, hay que replanificar
+								bool seDesbloqueo = desbloquearDeCola(paqueteStore.clave); //cuando se hace un store hay que pasar a ready el primer esi encolado en espera de esa clave
+								if(seDesbloqueo && conDesalojo){ //si es con desalojo y se desbloquea un esi, hay que replanificar
+									hayQuePlanificar=true;
+								}
 
 							} else { //otro esi tiene bloqueada la clave o no la tiene nadie
 								printf("hay que abortar al esi por hacer un STORE que no corresponde\n");
@@ -336,6 +340,7 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	nuevoESI->socket = socketESI;
 	nuevoESI->estimado = ESTIMACION_I;
 	nuevoESI->listoDesde = systemClock;
+	nuevoESI->real = 0;
 
 	list_add(listos, nuevoESI);
 }
@@ -343,7 +348,7 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 void agregarESIAColaDeListos(t_ESI *esi) {
 	esi->estimado = (ALFA / 100) * (esi->real) + ((1 - (ALFA / 100)) * esi->estimado);
 	esi->listoDesde = systemClock;
-	esi->real=0;
+	esi->real = 0;
 
 	list_add(listos, esi);
 }
@@ -356,9 +361,9 @@ t_ESI *planificar() {
 			puts("se planifica con SJFSD"); //para comprobar
 			esi = sjfsd();
 		}
-//		else if (!strcmp(ALGORITMO, "SJF-CD")) {
-//			esi = sjfcd();
-//		}
+		else if (!strcmp(ALGORITMO, "SJF-CD")) {
+			esi = sjfcd();
+		}
 //		else if (!strcmp(ALGORITMO, "HRRN")) {
 //			esi = hrrn();
 //		}
@@ -401,6 +406,84 @@ t_ESI *sjfsd() {
 	}
 }
 
+t_ESI *sjfcd() {
+	if (!list_is_empty(listos)) {
+		t_ESI *esi;
+		t_ESI *esiElegido;
+		int index = 0;
+		int indexDefinitivo;
+
+		esiElegido = list_get(listos, index++);
+		indexDefinitivo=index-1;
+
+		while (index < list_size(listos)) {
+			// Guarda la instancia de ese index y lo incrementa
+			esi = list_get(listos, index++);
+
+			if (esi->estimado < esiElegido->estimado){
+				// Guarda la nueva instancia con mayor entradas libres como candidata
+				esiElegido = esi;
+				indexDefinitivo=index-1;
+			}
+		}
+
+		if(running!=NULL && running->estimado<esiElegido->estimado){
+			return running;
+		}
+		else{
+			list_remove(listos,indexDefinitivo);
+			if(running!=NULL){
+				agregarESIAColaDeListos(running);
+			}
+			return esiElegido;
+		}
+
+	} else {
+		return NULL;
+	}
+}
+
+t_ESI *hrrn() {
+	if (!list_is_empty(listos)) {
+		t_ESI *esi;
+		t_ESI *esiElegido;
+		int index = 0;
+		int indexDefinitivo;
+		float rr;
+		float rrElegido;
+
+
+		esiElegido = list_get(listos, index++);
+		indexDefinitivo=index-1;
+		rrElegido=getResponseRatio(esiElegido);
+
+		while (index < list_size(listos)) {
+			// Guarda la instancia de ese index y lo incrementa
+			esi = list_get(listos, index++);
+			rr = getResponseRatio(esi);
+
+			if (rr > rrElegido){
+				// Guarda la nueva instancia con mayor entradas libres como candidata
+				esiElegido = esi;
+				indexDefinitivo=index-1;
+			}
+		}
+
+		list_remove(listos,indexDefinitivo);
+			return esiElegido;
+		} else {
+			return NULL;
+		}
+}
+
+float getResponseRatio(t_ESI* esi){
+	int estimado = esi->estimado;
+	int espera = systemClock-esi->listoDesde;
+	float rr = 1+espera/estimado;
+
+	return rr;
+}
+
 void enviarOrdenDeEjecucion(){
 	if(proximoESI!=NULL){ //se envia orden de ejecutar al esi guardado en la variable proximoESI
 		t_head header;
@@ -424,6 +507,20 @@ void bloquearESI(char* clave){
 	}
 }
 
+bool desbloquearDeCola(char* clave){
+	if (dictionary_has_key(colasBloqueados,clave)){
+		t_ESI* procesoDesencolado = queue_pop((t_queue*)dictionary_get(colasBloqueados,clave));
+		agregarESIAColaDeListos(procesoDesencolado);
+		if(queue_is_empty((t_queue*)dictionary_get(colasBloqueados,clave))){
+			dictionary_remove(colasBloqueados,clave);
+		}
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
 void finalizarESI(){
 	liberarRecursos();
 	list_add(finalizados, running);
@@ -435,12 +532,12 @@ void liberarRecursos(){
 	for (table_index = 0; table_index < tableSize; table_index++) {
 		t_hash_element *element = clavesBloqueadas->elements[table_index];
 		while (element != NULL) {
-
+			t_hash_element *nextElement = element->next;
 			if(*(int*)(element->data)==running->idESI){
-				dictionary_remove(clavesBloqueadas,element->key);
+				desbloquearDeCola(element->key);
+				dictionary_remove_and_destroy(clavesBloqueadas,element->key,free);
 			}
-
-			element = element->next;
+			element = nextElement;
 		}
 	}
 }

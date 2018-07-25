@@ -45,11 +45,15 @@ void *mainProgram();
 void agregarNuevoESIAColaDeListos(int, int);
 t_ESI *planificar ();
 t_ESI *sjfsd();
+t_ESI *sjfcd();
+t_ESI *hrrn();
 void estimar();
 void enviarOrdenDeEjecucion();
 void bloquearESI(char*);
 void finalizarESI();
 void liberarRecursos();
+bool desbloquearDeCola(char*);
+float getResponseRatio(t_ESI*);
 
 
 
