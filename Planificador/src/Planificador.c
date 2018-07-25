@@ -6,7 +6,7 @@ t_dictionary *colasBloqueados;
 t_list *finalizados;
 t_dictionary *clavesBloqueadas;
 
-bool planificacionPausada;
+bool pausarPlanificador;
 int systemClock;	//clock del sistema. Se incrementa cada vez que se envia una orden de ejecucion. (cuenta la cantidad total de ordenes enviadas
 					//tambien sirve para medir el tiempo que un esi lleva esperando en la cola de listos. (debe guardarse en su t_esi y calcular la diferencia)
 
@@ -17,6 +17,8 @@ int main() {
 
 	int statusConsola, statusMainProgram;
 	pthread_t tConsola, tMainProgram;
+
+	pausarPlanificador = false;
 
 	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
@@ -87,13 +89,6 @@ void *mainProgram() {
 	else{
 		conDesalojo = false;
 	}
-
-//	// Creo las diferentes listas a ser utilizadas
-//	listos = list_create();
-//	colasBloqueados = dictionary_create(); //se entra por clave y devuelve cola de esis bloqueados en espera de la clave
-//	finalizados = list_create();
-//
-//	clavesBloqueadas = dictionary_create(); //se entra por clave y devuelve el id del esi que la tiene
 
 	t_head headerAEnviar;
 	headerAEnviar.context = PLANIFICADOR;
@@ -319,7 +314,7 @@ void *mainProgram() {
 			printf("hayQuePlanificar==false\n");
 		}
 
-		if(hayQueEnviarOrdenDeEjecucion){
+		if(hayQueEnviarOrdenDeEjecucion && !pausarPlanificador){
 			enviarOrdenDeEjecucion();
 			hayQueEnviarOrdenDeEjecucion=false;
 		}
@@ -544,6 +539,8 @@ void liberarRecursos(){
 
 void *consola() {
 
+	bool salir = false;
+	int opcion = 0;
 	t_head headerAEnviar;
 	headerAEnviar.context = CONSOLA;
 	headerAEnviar.mSize = 0;
@@ -553,102 +550,110 @@ void *consola() {
 	sendHead(coordinadorSocketConsola, headerAEnviar); // Le aviso al Coordinador que soy la consola del Planificador
 	log_trace(logPlanificador, "Consola conectada al Coordinador");
 
-	headerAEnviar.context = statusClave;
-	headerAEnviar.mSize = 0;
-	sendHead(coordinadorSocketConsola, headerAEnviar); // Le pido al Coordinador el comando Status Clave
-	log_trace(logPlanificador, "Se envió pedido de status clave");
-
-
-	t_head header = recvHead(coordinadorSocketConsola);
-
-	if (header.context == okRecibido) {
-		log_trace(logPlanificador, "Se recibio el ok");
-		header.context = cerrarConexion;
-		header.mSize = 0;
-		sendHead(coordinadorSocketConsola, header);
-		log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
-	}
-
-	//sleep(1);
-
-	int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
-	if (!conexion) {
-		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
-	} else {
-		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador no se cerró satisfactoriamente");
-	}
-
-//	system("clear");
-//	puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
-//	puts("1) Pausar / Continuar");
-//	puts("2) Bloquear (Clave, ID)");
-//	puts("3) Desbloquear (Clave)");
-//	puts("4) Listar (Recurso)");
-//	puts("5) Kill (ID)");
-//	puts("6) Status (Clave)");
-//	puts("7) Deadlock");
-//	printf("Ingrese Nro de comando: ");
-//	int opcion;
-//	//char* clave;
-//	//char* id;
-//	//char* recurso;
-//	scanf("%d", &opcion);
+//	headerAEnviar.context = statusClave;
+//	headerAEnviar.mSize = 0;
+//	sendHead(coordinadorSocketConsola, headerAEnviar); // Le pido al Coordinador el comando Status Clave
+//	log_trace(logPlanificador, "Se envió pedido de status clave");
 //
-//	switch (opcion) {
-//	case 1:
-//		system("clear");
-//		puts("PAUSAR / CONTINUAR");
-//		printf("Oprima 'P' para Pausar o 'C' para Continuar: ");
-//		scanf("%d", &opcion);
-//		if (opcion == 'P')
-//			printf("\n\nSe eligió Pausar");
-//		if (opcion == 'C')
-//			printf("\n\nSe eleigió Continuar");
-//		else
-//			printf("\n\nOpcion incorrecta");
-//		break;
 //
-//	case 2:
-//		system("clear");
-//		puts("BLOQUEAR");
-//		printf("Inserte Clave: ");
-//		//scanf("%s", clave);
-//		printf("\nInserte ID: ");
-//		//scanf("%s", id);
-//		break;
+//	t_head header = recvHead(coordinadorSocketConsola);
 //
-//	case 3:
-//		system("clear");
-//		puts("DESBLOQUEAR");
-//		printf("Inserte Clave: ");
-//		//scanf("%s", clave);
-//		break;
-//
-//	case 4:
-//		system("clear");
-//		puts("LISTAR");
-//		printf("Inserte Recurso: ");
-//		//scanf("%s", recurso);
-//		break;
-//
-//	case 5:
-//		system("clear");
-//		puts("KILL");
-//		printf("Escriba el ID del proceso a matar: ");
-//		//scanf("%s", id);
-//		break;
-//
-//	case 6:
-//		system("clear");
-//		puts("STATUS");
-//		printf("El algoritmo que está corriendo es: ");
-//		break;
-//
-//	case 7:
-//		system("clear");
-//		puts("Los deadlocks existentes son:");
-//		break;
+//	if (header.context == okRecibido) {
+//		log_trace(logPlanificador, "Se recibio el ok");
+//		header.context = cerrarConexion;
+//		header.mSize = 0;
+//		sendHead(coordinadorSocketConsola, header);
+//		log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
 //	}
+//
+//	sleep(1);
+//
+//	int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
+//	if (!conexion) {
+//		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
+//	} else {
+//		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador no se cerró satisfactoriamente");
+//	}
+	do {
+		opcion = 0;
+		system("clear");
+		puts("CONSOLA PLANIFICADOR, DIGITE EL Nro DE COMANDO A EJECUTAR:\n");
+		puts("1) Pausar / Continuar");
+		puts("2) Bloquear (Clave, ID)");
+		puts("3) Desbloquear (Clave)");
+		puts("4) Listar (Recurso)");
+		puts("5) Kill (ID)");
+		puts("6) Status (Clave)");
+		puts("7) Deadlock");
+		printf("Ingrese Nro de comando: ");
+		//char* clave;
+		//char* id;
+		//char* recurso;
+		scanf("%d", &opcion);
+
+		switch (opcion) {
+		case 1:
+			opcion = 0;
+			system("clear");
+			puts("PAUSAR / CONTINUAR");
+			printf("\n\nOprima 'P' para Pausar o 'C' para Continuar: ");
+			scanf("%d", &opcion);
+			if (opcion == 'P' || opcion == 'p') {
+				pausarPlanificador = true;
+				printf("\n\nSe eligió Pausar");
+				opcion = 0;
+			}else if (opcion == 'C'|| opcion == 'c') {
+				pausarPlanificador = false;
+				printf("\n\nSe eleigió Continuar");
+				opcion = 0;
+			}
+			else
+				printf("\n\nOpcion incorrecta");
+			break;
+
+		case 2:
+			system("clear");
+			puts("BLOQUEAR");
+			printf("Inserte Clave: ");
+			//scanf("%s", clave);
+			printf("\nInserte ID: ");
+			//scanf("%s", id);
+			break;
+
+		case 3:
+			system("clear");
+			puts("DESBLOQUEAR");
+			printf("Inserte Clave: ");
+			//scanf("%s", clave);
+			break;
+
+		case 4:
+			system("clear");
+			puts("LISTAR");
+			printf("Inserte Recurso: ");
+			//scanf("%s", recurso);
+			break;
+
+		case 5:
+			system("clear");
+			puts("KILL");
+			printf("Escriba el ID del proceso a matar: ");
+			//scanf("%s", id);
+			break;
+
+		case 6:
+			system("clear");
+			puts("STATUS");
+			printf("El algoritmo que está corriendo es: ");
+			break;
+
+		case 7:
+			system("clear");
+			puts("Los deadlocks existentes son:");
+			break;
+		}
+
+	}while(!salir);
 
 	return NULL;
 }
