@@ -31,6 +31,8 @@ int indexEquitativeLoad = 0;
 t_log* logCoordinador;
 t_log* logDeOperaciones;
 
+int instanciasCompactando = 0;
+
 typedef struct {
 	char* nombre;
 	int socket;

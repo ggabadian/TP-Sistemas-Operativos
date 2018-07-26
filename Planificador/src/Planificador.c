@@ -253,6 +253,12 @@ void *mainProgram() {
 								sendHead(coordinadorSocket,header);
 							}
 							break;
+						case ORDEN_COMPACTAR:
+							//Bloquear consola, etc
+							break;
+						case FIN_COMPACTAR:
+							//Desbloquear consola, etc
+							break;
 						default:
 							log_info(logPlanificador,"La solicitud del ESI %d es inválida.\n",idESI);
 						}

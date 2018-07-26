@@ -278,11 +278,11 @@ void* threadInstancia(void* socket) {
 //				instancia = instanciaConSocket(socket);
 //				instancia->entradasLibres = entradasInstancia;
 //				break;
-//			case FIN_COMPACTAR:
-//				//inicio mutex
-//				instanciasCompactando --;
-//				//fin mutex
-//				break;
+			case FIN_COMPACTAR:
+				//inicio mutex
+				instanciasCompactando --;
+				//fin mutex
+				break;
 			default:
 				break;
 		}
@@ -543,19 +543,24 @@ void enviarOrdenCompactar(){
 	header.context = ORDEN_COMPACTAR;
 	header.mSize = 0;
 
-	//enviar ORDEN_COMPACTAR al planificador
+	//informa al Planificador que se inicia la compactación
+	sendHead(socketPlanificador, header);
 
 	while(index < list_size(instanciasRegistradas)){
 		instancia = list_get(instanciasRegistradas, index++);
 		if(!desconectado(instancia->socket)){
-			//instanciasCompactando++;
+			instanciasCompactando++;
 			sendHead(instancia->socket, header);
 		}
 	}
 
-	//while(instanciasCompactando > 0) sleep(1); // Se bloquea hasta que terminen de compactar
+	while(instanciasCompactando > 0) sleep(1); // Se bloquea hasta que terminen de compactar
 
-	//enviar FIN_COMPACTAR al planificador
+	header.context = FIN_COMPACTAR;
+	header.mSize = 0;
+
+	//informa al Planificador que se terminó la compactación
+	sendHead(socketPlanificador, header);
 }
 
 t_list *instanciasActivas(){ // Retorna una lista con las instancias actualmente conectadas
