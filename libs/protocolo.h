@@ -31,6 +31,7 @@ typedef enum {
 	okInstancia,
 	ORDEN_COMPACTAR,
 	FIN_COMPACTAR,
+	NRO_ENTRADAS,
 	//errores de la instancia
 
 	// MENSAJES COMPARTIDOS

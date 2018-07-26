@@ -65,5 +65,6 @@ void enviarOrdenCompactar();
 t_list *instanciasActivas();
 t_instancia* instanciaConClave(char*);
 bool claveRegistrada(char*, t_instancia*);
+t_instancia* instanciaConSocket(int);
 
 #endif

@@ -249,8 +249,10 @@ void* threadESI(void* socket) {
 
 void* threadInstancia(void* socket) {
 	int socketInstancia = *(int*)socket;
+	int nroEntradasLibres = 0;
 	t_head header;
 	char* nombreDeInstancia;
+	t_instancia *instancia;
 
 	sendInitInstancia(socketInstancia);
 
@@ -273,11 +275,12 @@ void* threadInstancia(void* socket) {
 			case ORDEN_COMPACTAR:
 				enviarOrdenCompactar(); // Envia la orden de compactar a todas las instancias
 				break;
-//			case NRO_ENTRADAS:
-//				recv() entradasInstancia;
-//				instancia = instanciaConSocket(socket);
-//				instancia->entradasLibres = entradasInstancia;
-//				break;
+			case NRO_ENTRADAS:
+				recv(socketInstancia, &nroEntradasLibres, sizeof(uint32_t), MSG_WAITALL);
+				instancia = instanciaConSocket(socketInstancia);
+				if (instancia != NULL)
+					instancia->entradasLibres = nroEntradasLibres;
+				break;
 			case FIN_COMPACTAR:
 				//inicio mutex
 				instanciasCompactando --;
@@ -600,4 +603,20 @@ t_instancia* instanciaConClave(char *clave){ // Retorna la instancia que contien
 
 bool claveRegistrada(char *clave, t_instancia *instancia){
 	return dictionary_get(clavesRegistradas, clave)==instancia;
+}
+
+t_instancia* instanciaConSocket(int socket){ // Retorna la instancia con ese socket
+	if (!list_is_empty(instanciasRegistradas)){
+		t_instancia *instancia;
+		int index = 0;
+
+		while(index < list_size(instanciasRegistradas)){
+			instancia = list_get(instanciasRegistradas, index++);
+			if((!desconectado(instancia->socket)) & (instancia->socket == socket))
+				return instancia;
+		}
+		return NULL;
+	} else {
+		return NULL;
+	}
 }
