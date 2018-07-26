@@ -27,9 +27,9 @@ int main() {
 	clavesBloqueadas = dictionary_create(); //se entra por clave y devuelve el id del esi que la tiene
 
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
-	logPlanificador = log_create("../logs/logDePlanificador.log","Planificador", true, LOG_LEVEL_TRACE);
+	logPlanificador = log_create("../logs/logDePlanificador.log","Planificador", false, LOG_LEVEL_TRACE);
 
-	log_trace(logPlanificador, "Iniciando Planificador");
+	log_trace(logPlanificador, "\n\n\n\nIniciando Planificador\n\n\n\n\n\n");
 
 	// Cargo la configuración del Planificador desde el archivo config
 	cargarConfigPlanificador();
@@ -96,7 +96,7 @@ void *mainProgram() {
 
 	//Me conecto al Coordinador
 	int coordinadorSocket = connectSocket(IP_COORDINADOR, PUERTO_COORDINADOR); //Envío solicitud de conexión al Coordinador
-	printf("Conectado a Coordinador. \n");
+	log_info(logPlanificador,"Conectado a Coordinador. \n");
 	sendHead(coordinadorSocket, headerAEnviar); // Le aviso al Coordinador que soy el Planificador
 
 	//Creo socket para escuchar conexiones de ESIs entrantes
@@ -143,11 +143,10 @@ void *mainProgram() {
 					}
 					identificador = recvHead(socketCliente);
 					if (identificador.context == ERROR_HEAD) {
-						puts(
+						log_error(logPlanificador,
 								"Error en HANDSHAKE: No se pudo identificar a la entidad. Conexión desconocida.\n");
 					} else {
-						printf("Conectado a %s.\n",
-								identificar(identificador.context));
+						log_info(logPlanificador,"Conectado a %s.\n",identificar(identificador.context));
 					}
 
 					if (identificador.context == ESI) { // Si es un ESI, le asigna un id
@@ -178,7 +177,7 @@ void *mainProgram() {
 						switch (header.context) {
 						case OPERACION_GET:
 							recv(i, &paqueteGet, header.mSize, 0);
-							printf("Se recibió un GET <%s> del ESI %d \n",paqueteGet.clave, paqueteGet.idESI);
+							log_info(logPlanificador,"Se recibió un GET <%s> del ESI %d \n",paqueteGet.clave, paqueteGet.idESI);
 
 
 
@@ -190,22 +189,22 @@ void *mainProgram() {
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
-								printf("Nadie tenia tomada la clave, se aprueba el GET\n");
-								printf("Se entrego la clave %s al ESI %d\n",paqueteGet.clave,*(int*)dictionary_get(clavesBloqueadas,paqueteGet.clave));
+								log_info(logPlanificador,"Nadie tenia tomada la clave, se aprueba el GET\n");
+								log_info(logPlanificador,"Se entrego la clave %s al ESI %d\n",paqueteGet.clave,*(int*)dictionary_get(clavesBloqueadas,paqueteGet.clave));
 
 							} else if ((*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave))) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
-								printf("ID anterior: %d\nID Nuevo: %d\n\n",(*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave))),paqueteGet.idESI);
+								log_info(logPlanificador,"ID anterior: %d\nID Nuevo: %d\n\n",(*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave))),paqueteGet.idESI);
 								header.context=okESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
-								printf("El ESI ya tenia tomada la clave, se aprueba el GET\n");
+								log_info(logPlanificador,"El ESI ya tenia tomada la clave, se aprueba el GET\n");
 
 							} else { // otro esi tiene bloqueada la clave
 								header.context=blockedESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
 								bloquearESI(paqueteGet.clave); //esto solo agrega a la cola de bloqueados
-								printf("Otro ESI tenia tomada la clave, se bloquea el ESI\n");
+								log_info(logPlanificador,"Otro ESI tenia tomada la clave, se bloquea el ESI\n");
 								//hayQueplanificar se setea cuando el esi retorna
 							}
 
@@ -213,7 +212,7 @@ void *mainProgram() {
 
 						case OPERACION_SET:
 							recvSet(i, &paqueteSet);
-							printf("Se recibió un SET <%s> <%s> del ESI %d\n",
+							log_info(logPlanificador,"Se recibió un SET <%s> <%s> del ESI %d\n",
 									paqueteSet.clave,
 									paqueteSet.valor,
 									paqueteSet.idESI);
@@ -233,7 +232,7 @@ void *mainProgram() {
 							break;
 						case OPERACION_STORE:
 							recv(i, &paqueteStore, header.mSize, 0);
-							printf("Se recibió un STORE <%s> del ESI %d \n",
+							log_info(logPlanificador,"Se recibió un STORE <%s> del ESI %d \n",
 									paqueteStore.clave, paqueteStore.idESI);
 
 							// verificar si la solicitud es valida
@@ -248,14 +247,14 @@ void *mainProgram() {
 								}
 
 							} else { //otro esi tiene bloqueada la clave o no la tiene nadie
-								printf("hay que abortar al esi por hacer un STORE que no corresponde\n");
+								log_info(logPlanificador,"hay que abortar al esi por hacer un STORE que no corresponde\n");
 								header.context=abortESI;
 								header.mSize=0;
 								sendHead(coordinadorSocket,header);
 							}
 							break;
 						default:
-							printf("La solicitud del ESI %d es inválida.\n",idESI);
+							log_info(logPlanificador,"La solicitud del ESI %d es inválida.\n",idESI);
 						}
 					}
 				} else { //Un ESI me quiere decir algo
@@ -269,19 +268,19 @@ void *mainProgram() {
 						switch (header.context) {
 						case blockedESI:
 							//recv(i, clave, header.mSize, 0);
-							printf("El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, paqueteGet.clave);
+							log_info(logPlanificador,"El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, paqueteGet.clave);
 							hayQuePlanificar=true;
 							proximoESI=NULL;
 							running=NULL;
 							break;
 						case okESI:
-							printf("El ESI %d finalizo su accion correctamente.\n",running->idESI);
+							log_info(logPlanificador,"El ESI %d finalizo su accion correctamente.\n",running->idESI);
 							break;
 						case terminatedESI:
 							hayQuePlanificar=true;
 							proximoESI=NULL;
 							close(i);
-							printf("El esi %d termino de correr su script. \n",running->idESI);
+							log_info(logPlanificador,"El esi %d termino de correr su script. \n",running->idESI);
 							finalizarESI(); //libera recursos y manda a lista de finalizados
 							FD_CLR(i, &master);
 							running=NULL;
@@ -290,13 +289,13 @@ void *mainProgram() {
 							hayQuePlanificar=true;
 							proximoESI=NULL;
 							close(i);
-							printf("El esi %d aborto. \n",running->idESI);
+							log_info(logPlanificador,"El esi %d aborto. \n",running->idESI);
 							finalizarESI(); //libera recursos y manda a lista de finalizados
 							FD_CLR(i,&master);
 							running=NULL;
 							break;
 						default:
-							printf("Error en ESI.\n");
+							log_info(logPlanificador,"Error en ESI.\n");
 						}
 						hayQueEnviarOrdenDeEjecucion=true;
 					}
@@ -306,12 +305,12 @@ void *mainProgram() {
 
 
 		if(hayQuePlanificar){
-			printf("hayQuePlanificar==true\n");
+			log_info(logPlanificador,"hayQuePlanificar==true\n");
 			proximoESI=planificar();
 			hayQuePlanificar=false;
 		}
 		else{
-			printf("hayQuePlanificar==false\n");
+			log_info(logPlanificador,"hayQuePlanificar==false\n");
 		}
 
 		if(hayQueEnviarOrdenDeEjecucion && !pausarPlanificador){
@@ -353,7 +352,7 @@ t_ESI *planificar() {
 	t_ESI *esi;
 	if(!list_is_empty(listos)){
 		if (!strcmp(ALGORITMO, "SJF-SD")) {
-			puts("se planifica con SJFSD"); //para comprobar
+			log_info(logPlanificador,"se planifica con SJFSD"); //para comprobar
 			esi = sjfsd();
 		}
 		else if (!strcmp(ALGORITMO, "SJF-CD")) {
@@ -363,7 +362,7 @@ t_ESI *planificar() {
 //			esi = hrrn();
 //		}
 		else {
-			puts("Error: No se pudo determinar el algoritmo de planificación");
+			log_error(logPlanificador,"Error: No se pudo determinar el algoritmo de planificación");
 			return NULL;
 		}
 		return esi;
@@ -422,7 +421,7 @@ t_ESI *sjfcd() {
 			}
 		}
 
-		if(running!=NULL && running->estimado<esiElegido->estimado){
+		if(running!=NULL && (running->estimado - running->real)<esiElegido->estimado){
 			return running;
 		}
 		else{
@@ -566,8 +565,6 @@ void *consola() {
 //		log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
 //	}
 //
-//	sleep(1);
-//
 //	int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
 //	if (!conexion) {
 //		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
@@ -628,10 +625,30 @@ void *consola() {
 			break;
 
 		case 4:
-			system("clear");
+			;
+			char* clave = malloc(40);
+			//system("clear");
 			puts("LISTAR");
-			printf("Inserte Recurso: ");
-			//scanf("%s", recurso);
+			printf("Inserte Clave: ");
+			scanf("%s", clave);
+			if(dictionary_has_key(colasBloqueados,clave)){
+				printf("ESIS ENCOLADOS: ");
+				t_queue *esisEncolados;
+				esisEncolados=dictionary_get(colasBloqueados,clave);
+				int n = queue_size(esisEncolados);
+				int i;
+				for(i=0; i<n; i++){
+					t_ESI *esi;
+					esi = (t_ESI*)queue_pop(esisEncolados);
+					printf("%d, ",esi->idESI);
+					queue_push(esisEncolados,esi);
+				}
+			}
+			else{
+				printf("No hay ESIS en espera de la clave %s.",clave);
+			}
+			printf("\n");
+			free(clave);
 			break;
 
 		case 5:
@@ -651,7 +668,20 @@ void *consola() {
 			system("clear");
 			puts("Los deadlocks existentes son:");
 			break;
+		default:
+			break;
 		}
+
+
+		printf("\nPresione ENTER para realizar otra operacion de consola\n");
+		char enter = 0;
+		while (enter != '\r' && enter != '\n') { enter = getchar(); }
+		enter = 0;
+		while (enter != '\r' && enter != '\n') { enter = getchar(); }
+
+//		printf("Presione ENTER para realizar otra operacion de consola\n");
+//		enter = 0;
+//		while (enter != '\r' && enter != '\n') { enter = getchar(); }
 
 	}while(!salir);
 
