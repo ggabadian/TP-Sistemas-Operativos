@@ -160,7 +160,7 @@ void* threadESI(void* socket) {
 
 	while (connected) {
 		t_head header = recvHead(socketESI);
-		usleep(100000);// hardcodeado, despues cambiar por sleep(RETARDO);
+		sleep(1);// hardcodeado, despues cambiar por sleep(RETARDO);
 
 		switch(header.context){
 			case OPERACION_GET:

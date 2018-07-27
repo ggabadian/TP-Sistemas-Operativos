@@ -54,6 +54,9 @@ void finalizarESI();
 void liberarRecursos();
 bool desbloquearDeCola(char*);
 float getResponseRatio(t_ESI*);
+bool algun_esi_es_id(t_list*, int);
+t_ESI* remover_esi_con_id(t_list*, int);
+void buscar_en_colas_y_remover(t_dictionary*, int);
 
 
 
