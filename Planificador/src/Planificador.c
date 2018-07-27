@@ -15,6 +15,8 @@ int idESI;			//Lo hago global ya que se utiliza en la consola
 t_ESI *proximoESI;
 t_ESI *running;
 
+fd_set master;
+
 int main() {
 
 	int statusConsola, statusMainProgram;
@@ -110,7 +112,7 @@ void *mainProgram() {
 
 	idESI = 0; // Cantidad de ESIs conectados
 
-	fd_set master; 		// master file descriptor list
+	//fd_set master; 		// master file descriptor list
 	fd_set read_fds; 	// temp file descriptor list for select()
 	int fdmax;
 	FD_ZERO(&master);	// clear the master and temp sets
@@ -124,8 +126,8 @@ void *mainProgram() {
 	fdmax = (listeningSocket > coordinadorSocket ?listeningSocket : coordinadorSocket);
 
 	struct timeval timeout;
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
+//	timeout.tv_sec = 1;
+//	timeout.tv_usec = 0;
 	int valorSelect = 0;
 
 	t_get paqueteGet;
@@ -135,6 +137,8 @@ void *mainProgram() {
 	// main loop
 	for (;;) {
 		read_fds = master; // copy it
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
 		valorSelect = select(fdmax + 1, &read_fds, NULL, NULL, &timeout);
 		if ( valorSelect == -1) {
 			perror("select");
@@ -325,8 +329,7 @@ void *mainProgram() {
 		}
 
 		if(runningFinalizadoPorConsola && hayQueEnviarOrdenDeEjecucion){
-			close(running->socket);
-			FD_CLR(running->socket, &master);
+			puts("entre");
 			finalizarESI(running);
 			hayQuePlanificar=true;
 			runningFinalizadoPorConsola=false;
@@ -334,21 +337,23 @@ void *mainProgram() {
 		}
 
 		if(hayQuePlanificar && !pausarPlanificador){
+			puts("entre al de abajo");
 			log_info(logPlanificador,"hayQuePlanificar==true\n");
 			proximoESI=planificar();
 			if(proximoESI!=NULL){
 				hayQuePlanificar=false;
 			}
-
-
 		} else if(!pausarPlanificador) {
 			log_info(logPlanificador,"hayQuePlanificar==false\n");
 		}
 
 		if(hayQueEnviarOrdenDeEjecucion && !pausarPlanificador){
-			enviarOrdenDeEjecucion();
-			log_trace(logPlanificador, "Pasó por enviar orden");
-			hayQueEnviarOrdenDeEjecucion=false;
+			if(proximoESI!=NULL){
+				enviarOrdenDeEjecucion();
+				log_trace(logPlanificador, "Pasó por enviar orden");
+				hayQueEnviarOrdenDeEjecucion=false;
+			}
+
 		}
 
 	} // END for(;;)--and you thought it would never end!
@@ -552,6 +557,7 @@ void finalizarESI(t_ESI* esi){
 	liberarRecursos(esi);
 	list_add(finalizados, esi);
 	close(esi->socket);
+	FD_CLR(esi->socket,&master);
 }
 
 void liberarRecursos(t_ESI* esi){

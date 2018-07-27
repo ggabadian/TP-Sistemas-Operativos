@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 	memset(&paqueteStore, 0, sizeof(t_store)); //Inicializa toda la estrucutra
 
 	while (read != -1) {
-		puts(line);
+
 		// 5. esperar orden de ejecucion (trucho)
 //		printf("Presione ENTER para parsear la próxima línea");
 //		char enter = 0;
@@ -79,9 +79,12 @@ int main(int argc, char** argv) {
 		// 5. esperar orden de ejecucion (posta)
 		header = recvHead(planificadorSocket); //recibo orden de ejecucion
 
+
+
 		switch (header.context){
 
 			case executeESI:
+			puts(line);
 			// 7. enviar al coordinador la opercion
 			if (parsed.valido) {
 				switch (parsed.keyword) {
