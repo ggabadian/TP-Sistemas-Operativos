@@ -62,7 +62,6 @@ int main(int argc, char** argv) {
 	memset(&paqueteGet, 0, sizeof(t_get)); //Inicializa toda la estrucutra
 
 	t_set paqueteSet;
-	//memset(&paqueteSet, 0, sizeof(t_set)); //Inicializa toda la estrucutra
 
 	t_store paqueteStore;
 	memset(&paqueteStore, 0, sizeof(t_store)); //Inicializa toda la estrucutra
@@ -91,7 +90,7 @@ int main(int argc, char** argv) {
 				case GET:
 					header.context = OPERACION_GET;
 					header.mSize = sizeof(paqueteGet);
-
+					//parsed.argumentos.GET.clave[39]='\0';
 					if (strlen(parsed.argumentos.GET.clave) <= 40){ // Maximo permitido por consigna
 						strcpy(paqueteGet.clave, parsed.argumentos.GET.clave);
 					} else {
@@ -147,7 +146,6 @@ int main(int argc, char** argv) {
 					fprintf(stderr, "No se pudo interpretar \n");
 					exit(EXIT_FAILURE);
 				}
-				destruir_operacion(parsed);
 			} else {
 				fprintf(stderr, "La linea no es valida\n");
 				exit(EXIT_FAILURE);
@@ -157,7 +155,7 @@ int main(int argc, char** argv) {
 			sendHead(planificadorSocket, header);	// 9. Transimitir resultado al planificador
 			switch (header.context){
 				case blockedESI:
-					continue; // (Pendiente) BUG - Esto rompe
+					continue;
 				case okESI:
 					break;
 				case abortESI:
@@ -168,6 +166,7 @@ int main(int argc, char** argv) {
 					exit(EXIT_FAILURE);
 			}
 
+			destruir_operacion(parsed);
 			read = getline(&line, &len, fp); // 6. parseo de nuevo
 			parsed = parse(line);
 			numline++;

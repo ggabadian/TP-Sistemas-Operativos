@@ -314,7 +314,7 @@ void *mainProgram() {
 								proximoESI=NULL;
 								close(i);
 								log_info(logPlanificador,"El esi %d aborto. \n",running->idESI);
-								finalizarESI(); //libera recursos y manda a lista de finalizados
+								finalizarESI(running); //libera recursos y manda a lista de finalizados
 								FD_CLR(i,&master);
 								running=NULL;
 								break;
@@ -329,7 +329,6 @@ void *mainProgram() {
 		}
 
 		if(runningFinalizadoPorConsola && hayQueEnviarOrdenDeEjecucion){
-			puts("entre");
 			finalizarESI(running);
 			hayQuePlanificar=true;
 			runningFinalizadoPorConsola=false;
@@ -337,7 +336,6 @@ void *mainProgram() {
 		}
 
 		if(hayQuePlanificar && !pausarPlanificador){
-			puts("entre al de abajo");
 			log_info(logPlanificador,"hayQuePlanificar==true\n");
 			proximoESI=planificar();
 			if(proximoESI!=NULL){
@@ -590,28 +588,7 @@ void *consola() {
 	sendHead(coordinadorSocketConsola, headerAEnviar); // Le aviso al Coordinador que soy la consola del Planificador
 	log_trace(logPlanificador, "Consola conectada al Coordinador");
 
-//	headerAEnviar.context = statusClave;
-//	headerAEnviar.mSize = 0;
-//	sendHead(coordinadorSocketConsola, headerAEnviar); // Le pido al Coordinador el comando Status Clave
-//	log_trace(logPlanificador, "Se envió pedido de status clave");
-//
-//
-//	t_head header = recvHead(coordinadorSocketConsola);
-//
-//	if (header.context == okRecibido) {
-//		log_trace(logPlanificador, "Se recibio el ok");
-//		header.context = cerrarConexion;
-//		header.mSize = 0;
-//		sendHead(coordinadorSocketConsola, header);
-//		log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
-//	}
-//
-//	int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
-//	if (!conexion) {
-//		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
-//	} else {
-//		log_trace(logPlanificador, "La conexión entre la consola y el Coordinador no se cerró satisfactoriamente");
-//	}
+
 	do {
 		opcion = 0;
 		system("clear");
@@ -625,6 +602,8 @@ void *consola() {
 		puts("7) Deadlock");
 		printf("Ingrese Nro de comando: ");
 		scanf("%d", &opcion);
+
+		char* clave=malloc(40);
 
 		switch (opcion) {
 		case 1:
@@ -663,8 +642,6 @@ void *consola() {
 			break;
 
 		case 4:
-			;
-			char* clave = malloc(40);
 			puts("LISTAR");
 			printf("Inserte Clave: ");
 			scanf("%s", clave);
@@ -685,7 +662,6 @@ void *consola() {
 				printf("No hay ESIS en espera de la clave %s.",clave);
 			}
 			printf("\n");
-			free(clave);
 			break;
 
 		case 5:
@@ -709,19 +685,44 @@ void *consola() {
 			break;
 
 		case 6:
-			system("clear");
-			puts("STATUS");
-			printf("El algoritmo que está corriendo es: ");
+			puts("STATUS CLAVE");
+			printf("Escriba la clave que desee consultar: ");
+			scanf("%s", clave);
+
+			headerAEnviar.context = statusClave;
+			headerAEnviar.mSize = strlen(clave)+1;
+			sendHead(coordinadorSocketConsola, headerAEnviar); // Le pido al Coordinador el comando Status Clave
+			log_trace(logPlanificador, "Se envió al coordinador el status de la calve %s", clave);
+
+			send(coordinadorSocketConsola,clave,strlen(clave)+1,0);
+
+			t_head header = recvHead(coordinadorSocketConsola);
+
+
+			if (header.context == okRecibido) {
+				log_trace(logPlanificador, "Se recibio el ok");
+				header.context = cerrarConexion;
+				header.mSize = 0;
+				sendHead(coordinadorSocketConsola, header);
+				log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
+			}
+
+			int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
+			if (!conexion) {
+				log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
+			} else {
+				log_trace(logPlanificador, "La conexión entre la consola y el Coordinador no se cerró satisfactoriamente");
+			}
+
 			break;
 
 		case 7:
-			system("clear");
 			puts("Los deadlocks existentes son:");
 			break;
 		default:
 			break;
 		}
-
+		free(clave);
 
 		printf("\nPresione ENTER para realizar otra operacion de consola\n");
 		char enter = 0;
@@ -745,16 +746,27 @@ bool algun_esi_es_id(t_list *lista, int idBuscado){
 }
 
 void buscar_en_colas_y_remover(t_dictionary *diccionario, int idBuscado){
+
+	char* claveCopia;
+
 	void remover_de_cola_si_tiene_id (char* clave , void* cola){
 		t_list *lista = ((t_queue*)cola)->elements;
 		if (algun_esi_es_id(lista, idBuscado)){
 			t_ESI* esiQuitado = remover_esi_con_id(lista, idBuscado);
 			finalizarESI(esiQuitado);
-			printf("Se dinalizo el ESI %d \n", esiQuitado->idESI);
+			printf("Se finalizo el ESI %d \n", esiQuitado->idESI);
+
+			claveCopia=strdup(clave);
+
 		}
+
 	}
 
 	dictionary_iterator(diccionario,remover_de_cola_si_tiene_id);
+	if(queue_is_empty((t_queue*)dictionary_get(diccionario,claveCopia))){
+		dictionary_remove(diccionario,claveCopia);
+	}
+	free(claveCopia);
 }
 
 t_ESI* remover_esi_con_id(t_list* lista, int idBuscado){
