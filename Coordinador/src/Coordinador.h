@@ -31,6 +31,8 @@ int indexEquitativeLoad = 0;
 t_log* logCoordinador;
 t_log* logDeOperaciones;
 
+int instanciasCompactando = 0;
+
 typedef struct {
 	char* nombre;
 	int socket;
@@ -63,5 +65,6 @@ void enviarOrdenCompactar();
 t_list *instanciasActivas();
 t_instancia* instanciaConClave(char*);
 bool claveRegistrada(char*, t_instancia*);
+t_instancia* instanciaConSocket(int);
 
 #endif

@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
 	memset(&paqueteStore, 0, sizeof(t_store)); //Inicializa toda la estrucutra
 
 	while (read != -1) {
+		puts(line);
 		// 5. esperar orden de ejecucion (trucho)
 //		printf("Presione ENTER para parsear la próxima línea");
 //		char enter = 0;
@@ -78,101 +79,105 @@ int main(int argc, char** argv) {
 		// 5. esperar orden de ejecucion (posta)
 		header = recvHead(planificadorSocket); //recibo orden de ejecucion
 
-		// 7. enviar al coordinador la opercion
-		if (parsed.valido) {
-			switch (parsed.keyword) {
-			case GET:
-				header.context = OPERACION_GET;
-				header.mSize = sizeof(paqueteGet);
+		switch (header.context){
 
-				if (strlen(parsed.argumentos.GET.clave) <= 40){ // Maximo permitido por consigna
-					strcpy(paqueteGet.clave, parsed.argumentos.GET.clave);
-				} else {
-					printf("Error en GET: La clave en la línea %d supera los 40 caracteres.\n", numline);
+			case executeESI:
+			// 7. enviar al coordinador la opercion
+			if (parsed.valido) {
+				switch (parsed.keyword) {
+				case GET:
+					header.context = OPERACION_GET;
+					header.mSize = sizeof(paqueteGet);
+
+					if (strlen(parsed.argumentos.GET.clave) <= 40){ // Maximo permitido por consigna
+						strcpy(paqueteGet.clave, parsed.argumentos.GET.clave);
+					} else {
+						printf("Error en GET: La clave en la línea %d supera los 40 caracteres.\n", numline);
+						break;
+					}
+
+					paqueteGet.idESI = id;
+
+					sendHead(coordinadorSocket, header);
+					send(coordinadorSocket, &paqueteGet, sizeof(paqueteGet), 0);
 					break;
-				}
+				case SET:
+					header.context = OPERACION_SET;
+					header.mSize = 0;
 
-				paqueteGet.idESI = id;
+					if (strlen(parsed.argumentos.SET.clave) <= 40){ // Maximo permitido por consigna
+						strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
+					} else {
+						printf("Error en SET: La clave en la línea %d supera los 40 caracteres.\n", numline);
+						break;
+					}
 
-				sendHead(coordinadorSocket, header);
-				send(coordinadorSocket, &paqueteGet, sizeof(paqueteGet), 0);
-				break;
-			case SET:
-				header.context = OPERACION_SET;
-				header.mSize = 0;
+					paqueteSet.sizeValor = strlen(parsed.argumentos.SET.valor) + 1;
 
-				if (strlen(parsed.argumentos.SET.clave) <= 40){ // Maximo permitido por consigna
-					strcpy(paqueteSet.clave, parsed.argumentos.SET.clave);
-				} else {
-					printf("Error en SET: La clave en la línea %d supera los 40 caracteres.\n", numline);
+					paqueteSet.valor = malloc(paqueteSet.sizeValor);
+					strncpy(paqueteSet.valor, parsed.argumentos.SET.valor, strlen(parsed.argumentos.SET.valor));
+					(paqueteSet.valor)[strlen(parsed.argumentos.SET.valor)] = '\0';
+
+					paqueteSet.idESI = id;
+
+					sendHead(coordinadorSocket, header);
+					sendSet(coordinadorSocket, &paqueteSet);
+					free(paqueteSet.valor);
 					break;
-				}
+				case STORE:
+					header.context = OPERACION_STORE;
+					header.mSize = sizeof(paqueteStore);
 
-				paqueteSet.sizeValor = strlen(parsed.argumentos.SET.valor) + 1;
+					if (strlen(parsed.argumentos.STORE.clave) <= 40){ // Maximo permitido por consigna
+						strcpy(paqueteStore.clave, parsed.argumentos.STORE.clave);
+					} else {
+						printf("Error en STORE: La clave en la línea %d supera los 40 caracteres.\n", numline);
+						break;
+					}
 
-				paqueteSet.valor = malloc(paqueteSet.sizeValor);
-				strncpy(paqueteSet.valor, parsed.argumentos.SET.valor, strlen(parsed.argumentos.SET.valor));
-				(paqueteSet.valor)[strlen(parsed.argumentos.SET.valor)] = '\0';
+					paqueteStore.idESI = id;
 
-				paqueteSet.idESI = id;
-
-				sendHead(coordinadorSocket, header);
-				sendSet(coordinadorSocket, &paqueteSet);
-				free(paqueteSet.valor);
-				break;
-			case STORE:
-				header.context = OPERACION_STORE;
-				header.mSize = sizeof(paqueteStore);
-
-				if (strlen(parsed.argumentos.STORE.clave) <= 40){ // Maximo permitido por consigna
-					strcpy(paqueteStore.clave, parsed.argumentos.STORE.clave);
-				} else {
-					printf("Error en STORE: La clave en la línea %d supera los 40 caracteres.\n", numline);
+					sendHead(coordinadorSocket, header);
+					send(coordinadorSocket, &paqueteStore, sizeof(paqueteStore), 0);
 					break;
+				default:
+					fprintf(stderr, "No se pudo interpretar \n");
+					exit(EXIT_FAILURE);
 				}
-
-				paqueteStore.idESI = id;
-
-				sendHead(coordinadorSocket, header);
-				send(coordinadorSocket, &paqueteStore, sizeof(paqueteStore), 0);
-				break;
-			default:
-				fprintf(stderr, "No se pudo interpretar \n");
+				destruir_operacion(parsed);
+			} else {
+				fprintf(stderr, "La linea no es valida\n");
 				exit(EXIT_FAILURE);
 			}
-			destruir_operacion(parsed);
-		} else {
-			fprintf(stderr, "La linea no es valida\n");
+
+			header = recvHead(coordinadorSocket);	// 8. Recibir resultado por parte del coordinador
+			sendHead(planificadorSocket, header);	// 9. Transimitir resultado al planificador
+			switch (header.context){
+				case blockedESI:
+					continue; // (Pendiente) BUG - Esto rompe
+				case okESI:
+					break;
+				case abortESI:
+					puts("ESI abortado por orden del coordinador");
+					exit(EXIT_FAILURE);
+				default:
+					puts("ESI abortado. No se reconoce la respuesta del coordinador");
+					exit(EXIT_FAILURE);
+			}
+
+			read = getline(&line, &len, fp); // 6. parseo de nuevo
+			parsed = parse(line);
+			numline++;
+			break;
+
+		case ERROR_HEAD:
+			puts("EL Planificador me cerro la conexion");
 			exit(EXIT_FAILURE);
+			break;
+
+		default:
+			break;
 		}
-
-		// 8. Recibir resultado por parte del coordinador
-
-		// 9. Transimitir resultado al planificador
-				/*
-				 * if (me bloquee)
-				 * 		continue
-				 */
-		header = recvHead(coordinadorSocket);
-		sendHead(planificadorSocket, header);
-		switch (header.context){
-			case blockedESI:
-				continue; // (Pendiente) BUG - Esto rompe
-				//break;
-			case okESI:
-				break;
-			case abortESI:
-				puts("ESI abortado por orden del coordinador");
-				exit(EXIT_FAILURE);
-			default:
-				puts("ESI abortado. No se reconoce la respuesta del coordinador");
-				exit(EXIT_FAILURE);
-		}
-
-		read = getline(&line, &len, fp); // 6. parseo de nuevo
-		parsed = parse(line);
-		numline++;
-		//printf("\n");
 	}
 
 	header.context=terminatedESI;

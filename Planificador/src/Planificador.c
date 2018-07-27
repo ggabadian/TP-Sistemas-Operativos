@@ -7,8 +7,10 @@ t_list *finalizados;
 t_dictionary *clavesBloqueadas;
 
 bool pausarPlanificador;
+bool runningFinalizadoPorConsola;
 int systemClock;	//clock del sistema. Se incrementa cada vez que se envia una orden de ejecucion. (cuenta la cantidad total de ordenes enviadas
 					//tambien sirve para medir el tiempo que un esi lleva esperando en la cola de listos. (debe guardarse en su t_esi y calcular la diferencia)
+int idESI;			//Lo hago global ya que se utiliza en la consola
 
 t_ESI *proximoESI;
 t_ESI *running;
@@ -19,6 +21,8 @@ int main() {
 	pthread_t tConsola, tMainProgram;
 
 	pausarPlanificador = false;
+
+	runningFinalizadoPorConsola=false;
 
 	// Creo las diferentes listas a ser utilizadas
 	listos = list_create();
@@ -104,7 +108,7 @@ void *mainProgram() {
 	int listeningSocket = listenSocket(PUERTO);
 	listen(listeningSocket, BACKLOG);
 
-	int idESI = 0; // Cantidad de ESIs conectados
+	idESI = 0; // Cantidad de ESIs conectados
 
 	fd_set master; 		// master file descriptor list
 	fd_set read_fds; 	// temp file descriptor list for select()
@@ -259,7 +263,16 @@ void *mainProgram() {
 									header.mSize=0;
 									sendHead(coordinadorSocket,header);
 								}
+							break;
+
+							case ORDEN_COMPACTAR:
+								//Bloquear consola, etc
 								break;
+
+							case FIN_COMPACTAR:
+								//Desbloquear consola, etc
+								break;
+
 							default:
 								log_info(logPlanificador,"La solicitud del ESI %d es inválida.\n",idESI);
 							}
@@ -288,7 +301,7 @@ void *mainProgram() {
 								proximoESI=NULL;
 								close(i);
 								log_info(logPlanificador,"El esi %d termino de correr su script. \n",running->idESI);
-								finalizarESI(); //libera recursos y manda a lista de finalizados
+								finalizarESI(running); //libera recursos y manda a lista de finalizados
 								FD_CLR(i, &master);
 								running=NULL;
 								break;
@@ -311,11 +324,23 @@ void *mainProgram() {
 			} // END looping through file descriptors
 		}
 
+		if(runningFinalizadoPorConsola && hayQueEnviarOrdenDeEjecucion){
+			close(running->socket);
+			FD_CLR(running->socket, &master);
+			finalizarESI(running);
+			hayQuePlanificar=true;
+			runningFinalizadoPorConsola=false;
+			sleep(1);
+		}
 
 		if(hayQuePlanificar && !pausarPlanificador){
 			log_info(logPlanificador,"hayQuePlanificar==true\n");
 			proximoESI=planificar();
-			hayQuePlanificar=false;
+			if(proximoESI!=NULL){
+				hayQuePlanificar=false;
+			}
+
+
 		} else if(!pausarPlanificador) {
 			log_info(logPlanificador,"hayQuePlanificar==false\n");
 		}
@@ -523,19 +548,20 @@ bool desbloquearDeCola(char* clave){
 	}
 }
 
-void finalizarESI(){
-	liberarRecursos();
-	list_add(finalizados, running);
+void finalizarESI(t_ESI* esi){
+	liberarRecursos(esi);
+	list_add(finalizados, esi);
+	close(esi->socket);
 }
 
-void liberarRecursos(){
+void liberarRecursos(t_ESI* esi){
 	int table_index;
 	int tableSize = clavesBloqueadas->table_max_size;
 	for (table_index = 0; table_index < tableSize; table_index++) {
 		t_hash_element *element = clavesBloqueadas->elements[table_index];
 		while (element != NULL) {
 			t_hash_element *nextElement = element->next;
-			if(*(int*)(element->data)==running->idESI){
+			if(*(int*)(element->data)==esi->idESI){
 				desbloquearDeCola(element->key);
 				dictionary_remove_and_destroy(clavesBloqueadas,element->key,free);
 			}
@@ -592,9 +618,6 @@ void *consola() {
 		puts("6) Status (Clave)");
 		puts("7) Deadlock");
 		printf("Ingrese Nro de comando: ");
-		//char* clave;
-		//char* id;
-		//char* recurso;
 		scanf("%d", &opcion);
 
 		switch (opcion) {
@@ -636,12 +659,11 @@ void *consola() {
 		case 4:
 			;
 			char* clave = malloc(40);
-			//system("clear");
 			puts("LISTAR");
 			printf("Inserte Clave: ");
 			scanf("%s", clave);
 			if(dictionary_has_key(colasBloqueados,clave)){
-				printf("ESIS ENCOLADOS: ");
+				printf("ESIS ENCOLADOS:\n");
 				t_queue *esisEncolados;
 				esisEncolados=dictionary_get(colasBloqueados,clave);
 				int n = queue_size(esisEncolados);
@@ -649,7 +671,7 @@ void *consola() {
 				for(i=0; i<n; i++){
 					t_ESI *esi;
 					esi = (t_ESI*)queue_pop(esisEncolados);
-					printf("%d, ",esi->idESI);
+					printf("%d) ESI: %d,\n",i+1,esi->idESI);
 					queue_push(esisEncolados,esi);
 				}
 			}
@@ -661,10 +683,23 @@ void *consola() {
 			break;
 
 		case 5:
-			system("clear");
 			puts("KILL");
-			printf("Escriba el ID del proceso a matar: ");
-			//scanf("%s", id);
+			int id;
+			printf("Escriba el ID del proceso a finalizar: ");
+			scanf("%d", &id);
+			if(id>idESI){												//no existe el esi
+				puts("No existe ESI con ese ID en el sistema");
+			} else if(algun_esi_es_id(finalizados,id)){					//el esi ya finalizo
+				puts("El ESI ya esta finalizado");
+			} else if(algun_esi_es_id(listos,id)){						//el esi esta en cola de listos
+				t_ESI* esiQuitado = remover_esi_con_id(listos,id);
+				finalizarESI(esiQuitado);
+			} else if(running!=NULL && id == running->idESI){			//el esi es el running
+				proximoESI=NULL;
+				runningFinalizadoPorConsola=true;
+			}else {														//el esi esta bloqueado
+				buscar_en_colas_y_remover(colasBloqueados,id);
+			}
 			break;
 
 		case 6:
@@ -688,11 +723,40 @@ void *consola() {
 		enter = 0;
 		while (enter != '\r' && enter != '\n') { enter = getchar(); }
 
-//		printf("Presione ENTER para realizar otra operacion de consola\n");
-//		enter = 0;
-//		while (enter != '\r' && enter != '\n') { enter = getchar(); }
+
 
 	}while(!salir);
 
 	return NULL;
 }
+
+bool algun_esi_es_id(t_list *lista, int idBuscado){
+  bool condicionEsi(void* esi){
+	  int id = ((t_ESI*)esi)->idESI;
+	  return id == idBuscado;
+  }
+  return list_any_satisfy(lista,condicionEsi);
+}
+
+void buscar_en_colas_y_remover(t_dictionary *diccionario, int idBuscado){
+	void remover_de_cola_si_tiene_id (char* clave , void* cola){
+		t_list *lista = ((t_queue*)cola)->elements;
+		if (algun_esi_es_id(lista, idBuscado)){
+			t_ESI* esiQuitado = remover_esi_con_id(lista, idBuscado);
+			finalizarESI(esiQuitado);
+			printf("Se dinalizo el ESI %d \n", esiQuitado->idESI);
+		}
+	}
+
+	dictionary_iterator(diccionario,remover_de_cola_si_tiene_id);
+}
+
+t_ESI* remover_esi_con_id(t_list* lista, int idBuscado){
+	bool condicionEsi(void* esi){
+		  int id = ((t_ESI*)esi)->idESI;
+		  return id == idBuscado;
+	  }
+	return list_remove_by_condition(lista,condicionEsi);
+}
+
+
