@@ -423,18 +423,27 @@ t_instancia* leastSpaceUsed(){
 		t_instancia *instancia;
 		t_instancia *instanciaElegida;
 		int index = 0;
+		int auxIndex = 0;
 
-		do { // (Pendiente) BUG - Rompe si todas las de la lista estan desconectadas
+		do {
 		instanciaElegida = list_get(instanciasRegistradas, index++);
-		} while(desconectado(instanciaElegida->socket));
+		if(!(index < list_size(instanciasRegistradas)))
+						index = 0;
 
-		while(index < list_size(instanciasRegistradas)){
-			// Guarda la instancia de ese index y lo incrementa
-			instancia = list_get(instanciasRegistradas, index++);
+		} while(desconectado(instanciaElegida->socket) && (auxIndex != index));
 
-			if (!desconectado(instancia->socket) && (instancia->entradasLibres > instanciaElegida->entradasLibres))
-				// Guarda la nueva instancia con mayor entradas libres como candidata
-				instanciaElegida = instancia;
+		// Si esto pasa significa que ninguna instancia de la lista está conectada
+		if(desconectado(instanciaElegida->socket)){
+			return NULL;
+		} else { // Significa que encontro una instancia conectada
+			while(index < list_size(instanciasRegistradas)){
+				// Guarda la instancia de ese index y lo incrementa
+				instancia = list_get(instanciasRegistradas, index++);
+
+				if (!desconectado(instancia->socket) && (instancia->entradasLibres > instanciaElegida->entradasLibres))
+					// Guarda la nueva instancia con mayor entradas libres como candidata
+					instanciaElegida = instancia;
+			}
 		}
 		return instanciaElegida;
 	} else {
