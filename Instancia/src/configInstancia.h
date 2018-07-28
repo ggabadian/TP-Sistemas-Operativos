@@ -16,6 +16,8 @@
 #include <commons/bitarray.h>
 #include <commons/collections/list.h>
 #include <math.h>
+#include <pthread.h>
+#include <string.h>
 
 // Campos de instancia.config
 char *IP_COORDINADOR;

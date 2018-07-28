@@ -18,7 +18,16 @@ t_log* LOG_INSTANCIA;
 t_set paqueteSet;
 t_store paqueteStore;
 t_initInstancia paqueteInit;
-int connected;
+
+typedef struct {
+	char clave[40];
+	int posicion;
+	int tamanio;
+	int cantidadUtilizada;
+	int cantidadReferencias;
+}t_entrada;
+
+int CONNECTED;
 
 
 void enviarACoordinador(char* msg);
@@ -32,13 +41,13 @@ int entradasNecesarias(char* valor);
 void realizarStore(char clave[40]);
 void correrAlgoritmoDeReemplazo();
 bool yaExisteClave(char clave[40]);
+void recibirSet();
+void atenderDump();
+void realizarDump();
+void enviarOrdenDeCompactar();
+void limpiarPosicion(int posicion);
+void compactar();
 
-typedef struct {
-	char clave[40];
-	int posicion;
-	int tamanio;
-	int cantidadUtilizada;
-	int cantidadReferencias;
-}datoEntrada;
+
 
 #endif

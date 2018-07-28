@@ -1,24 +1,54 @@
 #include "Instancia.h"
-#include <string.h>
 
 int main(int argc, char* argv[]) {
+	int i=0;
+	//int statusThread;
+	//pthread_t threadDump;
+
 	LOG_INSTANCIA = log_create("../logs/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
 	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
+
 	cargarConfig(argv[1]);
 
-	puts("No conectada, se presenta al coordinador");
+	//se crea el hilo para atender el dump
+	/*
+	statusThread = pthread_create(&threadDump, NULL, &atenderDump, NULL);
+	if (statusThread){
+		log_error(LOG_INSTANCIA, "No se pudo crear el hilo para el Dump");
+	}
+	*/
 	conectarCoordinador();
-	connected = 1;
 
-	while(connected){ //espera que llegue una operacion
+	//para pruebas
+	CANTIDAD_ENTRADAS = 10;
+	TAMANIO_ENTRADAS = 10;
+	TABLA_ENTRADAS = list_create();
+	ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
+	recibirSet();
+	while(ALMACENAMIENTO[i] != NULL){
+		printf("El valor del almacenamiento en la posicion [%d] es: %s", i, ALMACENAMIENTO[i]);
+	}
+	/*
+	while(CONNECTED){ //espera que llegue una operacion
 		puts("Disponible, esperando que el coordinador envie una sentencia");
 		recibirOperacion();
-	}
+	}*/
 
 	log_destroy(LOG_INSTANCIA);
+	free(ALMACENAMIENTO);
 	return EXIT_SUCCESS;
 }
 
+void recibirSet(){
+	memset(&paqueteSet, 0, sizeof(t_set));
+	strcpy(paqueteSet.clave, "claudio");
+	paqueteSet.valor = malloc(strlen("pelado")+1);
+	strcpy(paqueteSet.valor, "pelado");
+	paqueteSet.sizeValor = strlen("pelado");
+	printf("el valor es: %s",paqueteSet.valor );
+	realizarSet(entradasNecesarias(paqueteSet.valor));
+
+}
 void conectarCoordinador(){
 	t_head header;
 
@@ -36,7 +66,7 @@ void conectarCoordinador(){
 	send(SOCKET_COORDINADOR, NOMBRE, strlen(NOMBRE), 0);
 
 	log_info(LOG_INSTANCIA, "Conectada a Coordinador.");
-
+	CONNECTED = 1;
 }
 
 void recibirOperacion(){
@@ -61,14 +91,28 @@ void recibirOperacion(){
 		realizarStore(paqueteStore.clave);
 		puts("Se recibio un store");
 		break;
+	case OPERACION_COMPACTAR:
+		compactar();
+		break;
 	case ERROR_HEAD:
-		connected = 0;
+		CONNECTED = 0;
 		//procesa error
 		break;
 	default:
 		puts("Se desconoce el error");
 		break;
 	}
+}
+
+void atenderDump(){
+	while(CONNECTED){
+		sleep(INTERVALO_DUMP);
+		realizarDump();
+	}
+}
+
+void realizarDump(){
+
 }
 
 int entradasNecesarias(char* valor){
@@ -78,34 +122,21 @@ int entradasNecesarias(char* valor){
 bool hayEntradasDisponibles(int tamanio){
 	int i;
 	int cantidad = 0;
+
 	for(i=0; i< CANTIDAD_ENTRADAS; i++){
-		if (ALMACENAMIENTO[i] == 0){ //encontro un 0
+		if (ALMACENAMIENTO[i] == NULL){
 			cantidad++;
 		}
-	}
-	if (cantidad >= tamanio){
-		return true;
+		if (cantidad >= tamanio){
+				return true;
+		}
 	}
 	return false;
 }
 
-bool hayEspacioContiguo(int tamanio, int* posicion){\
-	int i=0;
-	int j;
-	while(i != CANTIDAD_ENTRADAS){
-		if(ALMACENAMIENTO[i] != 0){
-			for(j=1; j<tamanio; j++){
-				if (ALMACENAMIENTO[i] == 0){
-					continue;
-				}
-				return true;
-			}
-			i=i+j;
-		}else{
-			i++;
-		}
-	}
-	return false;
+bool hayEspacioContiguo(int tamanio, int* posicion){
+	posicion = 0;
+	return true;
 }
 
 void almacenarDato(int posicion, char* valor, int cantidadEntradas){
@@ -130,37 +161,87 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 }
 
 void realizarSet(int entradasNecesarias){
+	int seAlmaceno = 1;
 	int posicion=0;
-	datoEntrada dato;
+	int cantidadABorrar=0;
+	int i;
+	t_entrada* dato;
 	if (yaExisteClave(paqueteSet.clave)){
+		//dato = obtenerDato(paqueteSet.clave);
+		//ocupa el mismo espacio
+		if (entradasNecesarias == dato->cantidadUtilizada){
+			dato->tamanio = paqueteSet.sizeValor;
+			almacenarDato(dato->posicion, paqueteSet.valor, entradasNecesarias);
+		}
+		//ocupa mas espacio
+		if (entradasNecesarias > dato->cantidadUtilizada){
 
-	}else{
-		if (hayEntradasDisponibles(entradasNecesarias)) { // hay suficientes entradas para mi nuevo dato
-			if (hayEspacioContiguo(entradasNecesarias, &posicion)){ //espacio contiguo en memoria
-					strcpy(dato.clave, paqueteSet.clave);
-					dato.tamanio = entradasNecesarias;
-					dato.cantidadReferencias= 1;
-					dato.posicion = posicion;
-					almacenarDato(posicion, paqueteSet.valor,entradasNecesarias);
-					list_add(TABLA_ENTRADAS, &dato);
-			}else{  // no hay espacio contiguo en memoria pero si cantida de espacios => compactar
-
+		}
+		//ocupa menos espacio
+		if (entradasNecesarias < dato->cantidadUtilizada){
+			cantidadABorrar = dato->cantidadUtilizada - entradasNecesarias;
+			dato->cantidadUtilizada = entradasNecesarias;
+			dato->tamanio = paqueteSet.sizeValor;
+			almacenarDato(dato->posicion, paqueteSet.valor, entradasNecesarias);
+			for(i=1;i <= cantidadABorrar;i++){
+				limpiarPosicion(dato->posicion+entradasNecesarias-i);
 			}
-		}else{  //no hay suficientes entradas para almacenar -> va a reemplazar
-				correrAlgoritmoDeReemplazo(dato);
+		}
+	}else{ //valor nuevo
+		memset(&dato,0,sizeof(t_entrada));
+		while(seAlmaceno){
+			if (hayEntradasDisponibles(entradasNecesarias)) { // hay suficientes entradas para mi nuevo dato
+				if (hayEspacioContiguo(entradasNecesarias, &posicion)){ //espacio contiguo en memoria
+						strcpy(dato->clave, paqueteSet.clave);
+						dato->tamanio = entradasNecesarias;
+						dato->posicion = posicion;
+						almacenarDato(posicion, paqueteSet.valor,entradasNecesarias);
+						list_add(TABLA_ENTRADAS, &dato);
+						seAlmaceno = 0;
+				}else{  // no hay espacio contiguo en memoria pero si cantida de espacios => compactar
+					enviarOrdenDeCompactar();
+				}
+			}else{  //no hay suficientes entradas para almacenar -> va a reemplazar
+					correrAlgoritmoDeReemplazo(dato);
+			}
 		}
 	}
 }
 
-void realizarStore(char clave[40]){
+void enviarOrdenDeCompactar(){
+	/*t_head header;
+	char* mensaje = "Hay que compactar";
+	header.context = necesidadCompactar;
+	header.mSize = strlen(mensaje);
+	sendHead(SOCKET_COORDINADOR, header);
+	send(SOCKET_COORDINADOR, mensaje, strlen(mensaje), 0);*/
+}
+
+void realizarStore(char* clave){
 
 }
 
 void correrAlgoritmoDeReemplazo(){
 
 }
+void compactar(){
 
-bool yaExisteClave(char clave[40]){
-	return false;
 }
+
+void limpiarPosicion(int posicion){
+	ALMACENAMIENTO[posicion] = NULL;
+}
+
+bool yaExisteClave(char* clave){
+	bool claveBuscada(void* dato){
+		if (strcmp(((t_entrada*)dato)->clave, clave)){
+			return true;
+		}
+		return false;
+	}
+	return list_any_satisfy(TABLA_ENTRADAS, claveBuscada);
+}
+
+
+
 
