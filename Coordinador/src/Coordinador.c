@@ -629,3 +629,112 @@ t_instancia* instanciaConSocket(int socket){ // Retorna la instancia con ese soc
 		return NULL;
 	}
 }
+
+void sendStatus(char* clave){
+	t_instancia *instanciaActual = instanciaConClave(clave);
+	t_instancia *instanciaPosible;
+	int sizeValor = 0;
+	char* valor;
+	int sizeNombreInstancia;
+
+	if (instanciaActual != NULL) {
+		instanciaPosible = instanciaActual;
+	} else {
+		instanciaPosible = distribuirStatus(clave);
+	}
+
+	// Esto es para testear
+	valor = malloc(5);
+	strcpy(valor, "hola");
+	sizeValor = 5;
+
+	//(Pendiente) Preguntar a la instancia por el valor asociado a la clave
+	// Esto va en el threadInstancia
+	// recv tamaño de valor
+	// recv valor
+
+	int packageSize = sizeof(sizeValor) + sizeValor + 2 * (sizeof(sizeNombreInstancia));
+	if (instanciaActual != NULL) packageSize += strlen(instanciaActual->nombre) + 1;
+	if (instanciaPosible != NULL) packageSize += strlen(instanciaPosible->nombre) + 1;
+
+	char *serializedPackage = malloc(packageSize);
+	int offset = 0;
+	int sizeToSend;
+
+	// Valor
+	sizeToSend = sizeof(uint32_t);
+	memcpy(serializedPackage + offset, &(sizeValor), sizeToSend);
+	offset += sizeToSend;
+
+	if (sizeValor != 0){
+		sizeToSend = sizeValor;
+		memcpy(serializedPackage + offset, valor, sizeToSend);
+		offset += sizeToSend;
+	}
+
+	// Nombre instancia actual
+	if (instanciaActual != NULL){
+		sizeNombreInstancia = strlen(instanciaActual->nombre) + 1;
+	} else {
+		sizeNombreInstancia = 0;
+	}
+	sizeToSend = sizeof(uint32_t);
+	memcpy(serializedPackage + offset, &(sizeNombreInstancia), sizeToSend);
+	offset += sizeToSend;
+
+	if (sizeNombreInstancia != 0){
+		sizeToSend = sizeNombreInstancia;
+		memcpy(serializedPackage + offset, instanciaActual->nombre, sizeToSend);
+		offset += sizeToSend;
+	}
+
+	// Nombre posible instancia
+	if (instanciaPosible != NULL){
+		sizeNombreInstancia = strlen(instanciaPosible->nombre) + 1;
+	} else {
+		sizeNombreInstancia = 0;
+	}
+	sizeToSend = sizeof(uint32_t);
+	memcpy(serializedPackage + offset, &(sizeNombreInstancia), sizeToSend);
+	offset += sizeToSend;
+
+	if (sizeNombreInstancia != 0){
+		sizeToSend = sizeNombreInstancia;
+		memcpy(serializedPackage + offset, instanciaPosible->nombre, sizeToSend);
+		offset += sizeToSend;
+	}
+
+	send(socket, serializedPackage, packageSize, 0);
+
+	free(serializedPackage);
+
+}
+
+t_instancia* distribuirStatus(char* clave){
+	t_instancia *instancia;
+	int auxIndexEquitativeLoad = 0;
+
+		if (!strcmp(ALGORITMO, "EL")) {
+			// inicio mutexInstanciasRegistradas
+			auxIndexEquitativeLoad = indexEquitativeLoad;
+			instancia = equitativeLoad();
+			indexEquitativeLoad = auxIndexEquitativeLoad; // Para que no tenga efecto real
+			// fin mutexInstanciasRegistradas
+		}
+		else if (!strcmp(ALGORITMO, "LSU")) {
+			// inicio mutexInstanciasRegistradas
+			instancia = leastSpaceUsed();
+			// fin mutexInstanciasRegistradas
+		}
+		else if (!strcmp(ALGORITMO, "KE")) {
+			// inicio mutexInstanciasRegistradas
+			instancia = keyExplicit(clave);
+			// fin mutexInstanciasRegistradas
+		}
+		else {
+			log_error(logCoordinador, "(STATUS) No se pudo determinar el algoritmo de distribución");
+			return NULL;
+		}
+
+		return instancia;
+}

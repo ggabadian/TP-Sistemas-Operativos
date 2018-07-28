@@ -66,5 +66,7 @@ t_list *instanciasActivas();
 t_instancia* instanciaConClave(char*);
 bool claveRegistrada(char*, t_instancia*);
 t_instancia* instanciaConSocket(int);
+void sendStatus(char*);
+t_instancia* distribuirStatus(char*);
 
 #endif
