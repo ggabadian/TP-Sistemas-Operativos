@@ -696,24 +696,25 @@ void *consola() {
 
 			send(coordinadorSocketConsola,clave,strlen(clave)+1,0);
 
-			t_head header = recvHead(coordinadorSocketConsola);
+			recvStatus(coordinadorSocketConsola, clave);
 
-
-			if (header.context == okRecibido) {
-				log_trace(logPlanificador, "Se recibio el ok");
-				header.context = cerrarConexion;
-				header.mSize = 0;
-				sendHead(coordinadorSocketConsola, header);
-				log_trace(logPlanificador, "Se envió orden de cerrar la conexión");
-			}
-
-			int conexion = close(coordinadorSocketConsola); //Según programa demo que ví se debe cerrar la conexión a pesar de ser clientes
-			if (!conexion) {
-				log_trace(logPlanificador, "La conexión entre la consola y el Coordinador se cerró satisfactoriamente");
-			} else {
-				log_trace(logPlanificador, "La conexión entre la consola y el Coordinador no se cerró satisfactoriamente");
-			}
-
+			if(dictionary_has_key(colasBloqueados,clave)){
+				printf("ESIS ENCOLADOS:\n");
+				t_queue *esisEncolados;
+				esisEncolados=dictionary_get(colasBloqueados,clave);
+				int n = queue_size(esisEncolados);
+				int i;
+				for(i=0; i<n; i++){
+					t_ESI *esi;
+					esi = (t_ESI*)queue_pop(esisEncolados);
+					printf("%d) ESI: %d,\n",i+1,esi->idESI);
+					queue_push(esisEncolados,esi);
+					}
+				}
+				else{
+					printf("No hay ESIS en espera de la clave %s.",clave);
+				}
+				printf("\n");
 			break;
 
 		case 7:
@@ -724,7 +725,7 @@ void *consola() {
 		}
 		free(clave);
 
-		printf("\nPresione ENTER para realizar otra operacion de consola\n");
+		printf("\nPresione ENTER para realizar otra operacion de consola.\n");
 		char enter = 0;
 		while (enter != '\r' && enter != '\n') { enter = getchar(); }
 		enter = 0;
@@ -735,6 +736,50 @@ void *consola() {
 	}while(!salir);
 
 	return NULL;
+}
+
+void recvStatus(int socket, char* clave){
+
+	int sizeARecibir;
+
+	recv(socket, &sizeARecibir, 4, MSG_WAITALL);
+
+	if(sizeARecibir!=0){
+		char* valor = malloc(sizeARecibir);
+		recv(socket, valor, sizeARecibir, MSG_WAITALL);
+		printf("El valor de la clave %s es: %s.\n",clave, valor);
+		free(valor);
+	}
+	else{
+		printf("La clave %s no posee ningún valor.\n",clave);
+	}
+
+	recv(socket, &sizeARecibir, 4, MSG_WAITALL);
+	int aux = sizeARecibir;
+
+	if(sizeARecibir!=0){
+			char* nombreInstancia = malloc(sizeARecibir);
+			recv(socket, nombreInstancia, sizeARecibir, MSG_WAITALL);
+			printf("La clave %s se encuentra en la instancia: %s.\n",clave, nombreInstancia);
+			free(nombreInstancia);
+	}
+	else{
+		printf("La clave %s no se encuentra en ninguna instancia.\n",clave);
+	}
+
+	recv(socket, &sizeARecibir, 4, MSG_WAITALL);
+
+	if(sizeARecibir!=0){
+		char* nombreInstancia = malloc(sizeARecibir);
+		recv(socket, nombreInstancia, sizeARecibir, MSG_WAITALL);
+		if(aux==0){
+			printf("La clave %s se almacenaría en la instancia: %s.\n",clave, nombreInstancia);
+		}
+		free(nombreInstancia);
+	}
+	else{
+		printf("No hay instancias conectadas. No se puede simular la distribución.\n");
+	}
 }
 
 bool algun_esi_es_id(t_list *lista, int idBuscado){

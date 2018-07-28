@@ -119,23 +119,18 @@ void* threadConsola(void* socket) {
 
 	while (connected) {
 		t_head header = recvHead(socketConsola);
-
+		char* clave = malloc(header.mSize);
 		switch (header.context){
 			case statusClave:
 				log_trace(logCoordinador, "Se recibió el pedido 'status clave' desde la consola");
-				header.context = okRecibido;
-				header.mSize = 0;
-				sendHead(socketConsola, header);
-				break;
-
-			case cerrarConexion:
-				log_trace(logCoordinador, "Se recibió la orden de cerrar la conexión");
-				connected = 0;
+				recv(socketConsola, clave, header.mSize, MSG_WAITALL);
+				sendStatus(clave);
 				break;
 
 			default:
-				break;
+				connected = 0;
 		}
+		free(clave);
 	}
 
 
@@ -643,11 +638,6 @@ void sendStatus(char* clave){
 		instanciaPosible = distribuirStatus(clave);
 	}
 
-	// Esto es para testear
-	valor = malloc(5);
-	strcpy(valor, "hola");
-	sizeValor = 5;
-
 	//(Pendiente) Preguntar a la instancia por el valor asociado a la clave
 	// Esto va en el threadInstancia
 	// recv tamaño de valor
@@ -704,7 +694,7 @@ void sendStatus(char* clave){
 		offset += sizeToSend;
 	}
 
-	send(socket, serializedPackage, packageSize, 0);
+	send(socketConsola, serializedPackage, packageSize, 0);
 
 	free(serializedPackage);
 
