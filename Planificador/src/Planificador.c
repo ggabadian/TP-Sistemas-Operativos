@@ -562,6 +562,21 @@ void bloquearESI(char* clave){
 	}
 }
 
+int desbloquearClave(char* clave){
+	if (dictionary_has_key(colasBloqueados,clave)){
+		t_ESI* procesoDesencolado = queue_pop((t_queue*)dictionary_get(colasBloqueados,clave));
+		agregarESIAColaDeListos(procesoDesencolado);
+		if(queue_is_empty((t_queue*)dictionary_get(colasBloqueados,clave))){
+			dictionary_remove(colasBloqueados,clave);
+			return -1;
+		}
+		return procesoDesencolado->idESI;
+	} else{
+		return -1;
+	}
+}
+
+
 bool desbloquearDeCola(char* clave){
 	if (dictionary_has_key(colasBloqueados,clave)){
 		t_ESI* procesoDesencolado = queue_pop((t_queue*)dictionary_get(colasBloqueados,clave));
@@ -677,10 +692,16 @@ void *consola() {
 			break;
 
 		case 3:
-			system("clear");
-			puts("DESBLOQUEAR");
+			puts("DESBLOQUEAR CLAVE");
 			printf("Inserte Clave: ");
-			//scanf("%s", clave);
+			scanf("%s", clave);
+			int esi = desbloquearClave(clave);
+			if (esi > 0){
+				printf("Se agregó el ESI: %d a la cola de listos", esi);
+			} else{
+				printf("No quedan procesos bloqueados para la clave %s. Se libera la misma.", clave);
+			}
+			printf("\n");
 			break;
 
 		case 4:
