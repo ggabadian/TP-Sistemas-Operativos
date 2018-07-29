@@ -18,6 +18,7 @@
 //********** VARIABLES **********
 
 t_log* logPlanificador; //Creo el logger
+char* claveGlobal;
 
 
 
@@ -43,6 +44,7 @@ typedef struct {
 void *consola();
 void *mainProgram();
 void agregarNuevoESIAColaDeListos(int, int);
+void agregarESIAColaDeListos(t_ESI*);
 t_ESI *planificar ();
 t_ESI *sjfsd();
 t_ESI *sjfcd();
@@ -50,6 +52,7 @@ t_ESI *hrrn();
 void estimar();
 void enviarOrdenDeEjecucion();
 void bloquearESI(char*);
+void bloquearESIConsola(t_ESI* ,char*);
 void finalizarESI();
 void liberarRecursos();
 bool desbloquearDeCola(char*);
