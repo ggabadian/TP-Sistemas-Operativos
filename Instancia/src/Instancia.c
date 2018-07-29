@@ -1,7 +1,7 @@
 #include "Instancia.h"
 
 int main(int argc, char* argv[]) {
-	int i=0;
+	//int i=0;
 	//int statusThread;
 	//pthread_t threadDump;
 
@@ -18,37 +18,51 @@ int main(int argc, char* argv[]) {
 	}
 	*/
 	conectarCoordinador();
+	PUNTERO_CIRCULAR = 0;
+	PUNTERO_LRU = 0;
+	PUNTERO_BSU = 0;
 
 	//para pruebas
+	/*
 	CANTIDAD_ENTRADAS = 10;
 	TAMANIO_ENTRADAS = 10;
 	TABLA_ENTRADAS = list_create();
 	ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
-	recibirSet();
-	while(ALMACENAMIENTO[i] != NULL){
-		printf("El valor del almacenamiento en la posicion [%d] es: %s", i, ALMACENAMIENTO[i]);
+
+	test_recibirSet("raquel", "raquelita-nos-salva-con-sus-teses-y-aspirinas");
+	test_recibirSet("claudio", "pelado-bueno");
+	test_recibirSet("juani", "cabezon-tonto");
+	test_recibirSet("claudio", "pelado");
+	test_recibirSet("juani", "cabezon-tonto-no-es-pero");
+
+	for(i=0; i<CANTIDAD_ENTRADAS; i++){
+			printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
 	}
-	/*
+
+	test_recibirSet("perrito", "perrito-bueno");
+	*/
+
 	while(CONNECTED){ //espera que llegue una operacion
 		puts("Disponible, esperando que el coordinador envie una sentencia");
 		recibirOperacion();
-	}*/
+	}
 
 	log_destroy(LOG_INSTANCIA);
 	free(ALMACENAMIENTO);
 	return EXIT_SUCCESS;
 }
 
-void recibirSet(){
+void test_recibirSet(char* clave, char* valor){
 	memset(&paqueteSet, 0, sizeof(t_set));
-	strcpy(paqueteSet.clave, "claudio");
-	paqueteSet.valor = malloc(strlen("pelado")+1);
-	strcpy(paqueteSet.valor, "pelado");
-	paqueteSet.sizeValor = strlen("pelado");
-	printf("el valor es: %s",paqueteSet.valor );
+	strcpy(paqueteSet.clave, clave);
+	paqueteSet.valor = malloc(strlen(valor)+1);
+	strcpy(paqueteSet.valor, valor);
+	paqueteSet.sizeValor = strlen(valor);
+	printf("clave: %s\n", paqueteSet.clave);
 	realizarSet(entradasNecesarias(paqueteSet.valor));
-
+	free(paqueteSet.valor);
 }
+
 void conectarCoordinador(){
 	t_head header;
 
@@ -116,7 +130,13 @@ void realizarDump(){
 }
 
 int entradasNecesarias(char* valor){
-	return (int) ceil(strlen(valor)/TAMANIO_ENTRADAS);
+	int largoString = strlen(valor);
+	int cantidad = largoString/TAMANIO_ENTRADAS;
+	if(cantidad*TAMANIO_ENTRADAS < largoString){
+		cantidad++;
+	}
+	printf("Cantidad entradas: %d\n", cantidad);
+	return cantidad;
 }
 
 bool hayEntradasDisponibles(int tamanio){
@@ -134,77 +154,118 @@ bool hayEntradasDisponibles(int tamanio){
 	return false;
 }
 
-bool hayEspacioContiguo(int tamanio, int* posicion){
-	posicion = 0;
-	return true;
+bool hayEspacioContiguo(int entradasNecesarias, int* posicion){
+	int primeroVacio = -1;
+	int i;
+	for(i=0; i<CANTIDAD_ENTRADAS; i++){
+		//si hay un vacio se levanta el flag primero vacio, sino se baja
+		if(ALMACENAMIENTO[i]== NULL){
+			if(primeroVacio == -1){
+				primeroVacio = i;
+			}
+		}else{
+			primeroVacio = -1;
+		}
+		//si el flag primerovacio esta arriba, se verifica si tengo las entradas necesarias
+		if(primeroVacio >= 0){
+			if(i-primeroVacio+1 == entradasNecesarias){
+				*posicion = primeroVacio;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void almacenarDato(int posicion, char* valor, int cantidadEntradas){
-	int len = strlen(valor);
-	int i;
-	int inicio=0;
-	int desplazamiento= TAMANIO_ENTRADAS;
-	char* subvalor;
+	char* valorAgrabar;
+	bool seguir = true;
+	int nEntrada = 0;
 
-	for(i=0; i<cantidadEntradas; i++){
-		if(len> TAMANIO_ENTRADAS){
-			subvalor = string_substring(valor, inicio, desplazamiento);
-			memcpy(ALMACENAMIENTO[posicion=i],subvalor, desplazamiento);
-			inicio = inicio+desplazamiento;
-		}else{
-			subvalor = string_substring(valor, inicio+(i*desplazamiento), len);
-			memcpy(ALMACENAMIENTO[posicion=i],subvalor, desplazamiento);
+	while( seguir ){
+		if ( strlen(valor)>TAMANIO_ENTRADAS  ){
+			valorAgrabar = string_substring( valor, 0, TAMANIO_ENTRADAS );
+			valor        = string_substring_from( valor, TAMANIO_ENTRADAS );
+		} else {
+			valorAgrabar = valor ;
+			seguir = false;
 		}
-		len = len-desplazamiento;
+		ALMACENAMIENTO[posicion+nEntrada]= valorAgrabar;
+		free(valorAgrabar);
+		++nEntrada;
+	}
+}
+
+void realizarSet_Agregar(int entradasNecesarias){
+	int i;
+	t_entrada* dato = malloc(sizeof(t_entrada));
+	//int noSeAgrego = 1;
+	int posicion;
+
+	//while(noSeAgrego){
+		if(hayEntradasDisponibles(entradasNecesarias)){
+			puts("si, hay entradas\n");
+			if(hayEspacioContiguo(entradasNecesarias, &posicion)){
+				//se recibe la posicion por referencia de hayespacioscontiguos
+				puts("Hay espacios contiguos\n");
+				strcpy(dato->clave, paqueteSet.clave);
+				dato->tamanio = paqueteSet.sizeValor;
+				dato->cantidadUtilizada = entradasNecesarias;
+				dato->posicion = posicion;
+
+				list_add(TABLA_ENTRADAS, dato);
+				almacenarDato(posicion, paqueteSet.valor, entradasNecesarias);
+				//noSeAgrego = 0;
+			}else{
+				puts("No hay espacios contiguos\n");
+				enviarOrdenDeCompactar();
+			}
+		}else{
+			puts("Sin entradas, se corre el algoritmo\n");
+			correrAlgoritmoDeReemplazo();
+
+			for(i=0; i<CANTIDAD_ENTRADAS; i++){
+				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
+			}
+		}
+	//}
+}
+
+void realizarSet_Actualizar(int entradasNecesarias){
+	//se elimina de la lista, se pone a null las posiciones y se llama a agregar
+	char* clave = paqueteSet.clave;
+	t_entrada* dato;
+	int i;
+	int posicion;
+	int cantidadEntradas;
+	dato             = obtenerDato(clave);
+	posicion         = dato->posicion;
+	cantidadEntradas = dato->cantidadUtilizada;
+
+	for(i=0;i<cantidadEntradas;i++){
+		ALMACENAMIENTO[posicion+i] = NULL;
 	}
 
+	bool esElDato(void* dato){
+		if (strcmp(((t_entrada*)dato)->clave, clave)==0){
+					return true;
+		}
+		return false;
+	}
+	list_remove_by_condition(TABLA_ENTRADAS, esElDato);
+
+	realizarSet_Agregar(entradasNecesarias);
 }
 
 void realizarSet(int entradasNecesarias){
-	int seAlmaceno = 1;
-	int posicion=0;
-	int cantidadABorrar=0;
-	int i;
-	t_entrada* dato;
+	//esta funcion agrega o modifica una entrada en la lista e entradas y
+	// le envia el dato a almacenamiento
 	if (yaExisteClave(paqueteSet.clave)){
-		//dato = obtenerDato(paqueteSet.clave);
-		//ocupa el mismo espacio
-		if (entradasNecesarias == dato->cantidadUtilizada){
-			dato->tamanio = paqueteSet.sizeValor;
-			almacenarDato(dato->posicion, paqueteSet.valor, entradasNecesarias);
-		}
-		//ocupa mas espacio
-		if (entradasNecesarias > dato->cantidadUtilizada){
-
-		}
-		//ocupa menos espacio
-		if (entradasNecesarias < dato->cantidadUtilizada){
-			cantidadABorrar = dato->cantidadUtilizada - entradasNecesarias;
-			dato->cantidadUtilizada = entradasNecesarias;
-			dato->tamanio = paqueteSet.sizeValor;
-			almacenarDato(dato->posicion, paqueteSet.valor, entradasNecesarias);
-			for(i=1;i <= cantidadABorrar;i++){
-				limpiarPosicion(dato->posicion+entradasNecesarias-i);
-			}
-		}
-	}else{ //valor nuevo
-		memset(&dato,0,sizeof(t_entrada));
-		while(seAlmaceno){
-			if (hayEntradasDisponibles(entradasNecesarias)) { // hay suficientes entradas para mi nuevo dato
-				if (hayEspacioContiguo(entradasNecesarias, &posicion)){ //espacio contiguo en memoria
-						strcpy(dato->clave, paqueteSet.clave);
-						dato->tamanio = entradasNecesarias;
-						dato->posicion = posicion;
-						almacenarDato(posicion, paqueteSet.valor,entradasNecesarias);
-						list_add(TABLA_ENTRADAS, &dato);
-						seAlmaceno = 0;
-				}else{  // no hay espacio contiguo en memoria pero si cantida de espacios => compactar
-					enviarOrdenDeCompactar();
-				}
-			}else{  //no hay suficientes entradas para almacenar -> va a reemplazar
-					correrAlgoritmoDeReemplazo(dato);
-			}
-		}
+		puts("ya existe\n");
+		realizarSet_Actualizar(entradasNecesarias);
+	}else{
+		puts("no existe\n");
+		realizarSet_Agregar(entradasNecesarias);
 	}
 }
 
@@ -222,19 +283,69 @@ void realizarStore(char* clave){
 }
 
 void correrAlgoritmoDeReemplazo(){
+	if (strcmp(ALGORITMO,"CIRC") == 0){
+			algoritmoCircular();
+	}
+	if (strcmp(ALGORITMO,"LRU") == 0){
+			algoritmoLRU();
+	}
+	if (strcmp(ALGORITMO,"BSU") == 0){
+			algoritmoBSU();
+	}
+}
+
+void algoritmoCircular(){
+	//elimina del almacenamiento el dato atomico que encuentre, partiendo desde el valor actual
+	// del puntero circular
+	int mateAuno = 1;
+	int cantidad;
+	t_entrada* dato;
+	char* clave;
+	puts("Corre el algoritmo circular");
+	while(mateAuno){
+		if(ALMACENAMIENTO[PUNTERO_CIRCULAR]== NULL){
+			PUNTERO_CIRCULAR++;
+		}else{
+			dato = obtenerDato_posicion(PUNTERO_CIRCULAR);
+			cantidad = dato->cantidadUtilizada;
+			printf("Puntero %d , la cantidad es: %d\n",PUNTERO_CIRCULAR, cantidad);
+			if (cantidad == 1){
+				//es un dato atomico->lo mato
+				strcpy(clave, dato->clave);
+				ALMACENAMIENTO[PUNTERO_CIRCULAR]= NULL;
+
+				bool esElDato(void* dato){
+						if (strcmp(((t_entrada*)dato)->clave, clave)==0){
+									return true;
+						}
+						return false;
+					}
+				list_remove_by_condition(TABLA_ENTRADAS, esElDato);
+
+				PUNTERO_CIRCULAR++;
+				mateAuno = 0;
+			}else{
+				PUNTERO_CIRCULAR++;
+			}
+		}
+	}
+}
+
+void algoritmoLRU(){
 
 }
+
+void algoritmoBSU(){
+
+}
+
 void compactar(){
 
 }
 
-void limpiarPosicion(int posicion){
-	ALMACENAMIENTO[posicion] = NULL;
-}
-
 bool yaExisteClave(char* clave){
 	bool claveBuscada(void* dato){
-		if (strcmp(((t_entrada*)dato)->clave, clave)){
+		if (strcmp(((t_entrada*)dato)->clave, clave)==0){
 			return true;
 		}
 		return false;
@@ -242,6 +353,28 @@ bool yaExisteClave(char* clave){
 	return list_any_satisfy(TABLA_ENTRADAS, claveBuscada);
 }
 
+t_entrada* obtenerDato(char* clave){
+	bool esElDato(void* dato){
+		if (strcmp(((t_entrada*)dato)->clave, clave)==0){
+					return true;
+		}
+		return false;
+	}
+	t_entrada* dato = list_find(TABLA_ENTRADAS, esElDato);
+	return dato;
+}
 
+t_entrada* obtenerDato_posicion(int posicion){
+	bool esElDato(void* dato){
+		int posicionInicial = ((t_entrada*)dato)->posicion;
+		int posicionFinal = ((t_entrada*)dato)->posicion + ((t_entrada*)dato)->cantidadUtilizada-1;
+		if ((posicion >= posicionInicial) && (posicion <= posicionFinal)){
+			return true;
+		}
+		return false;
+	}
+	t_entrada* dato = list_find(TABLA_ENTRADAS, esElDato);
+	return dato;
+}
 
 

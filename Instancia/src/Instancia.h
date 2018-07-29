@@ -5,7 +5,9 @@
 #include "../../libs/socketClient.h"
 #include "../../libs/protocolo.h"
 
-
+int PUNTERO_CIRCULAR;
+int PUNTERO_LRU;
+int PUNTERO_BSU;
 int SOCKET_COORDINADOR;
 int CANTIDAD_ENTRADAS;
 int TAMANIO_ENTRADAS;
@@ -25,6 +27,7 @@ typedef struct {
 	int tamanio;
 	int cantidadUtilizada;
 	int cantidadReferencias;
+
 }t_entrada;
 
 int CONNECTED;
@@ -41,13 +44,17 @@ int entradasNecesarias(char* valor);
 void realizarStore(char clave[40]);
 void correrAlgoritmoDeReemplazo();
 bool yaExisteClave(char clave[40]);
-void recibirSet();
+void test_recibirSet(char* clave, char* valor);
 void atenderDump();
 void realizarDump();
 void enviarOrdenDeCompactar();
-void limpiarPosicion(int posicion);
 void compactar();
-
-
+void realizarSet_Agregar(int entradasNecesarias);
+void realizarSet_Actualizar(int entradasNecesarias);
+t_entrada* obtenerDato(char* clave);
+void algoritmoCircular();
+void algoritmoLRU();
+void algoritmoBSU();
+t_entrada* obtenerDato_posicion(int posicion);
 
 #endif
