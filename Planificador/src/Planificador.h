@@ -52,6 +52,7 @@ void enviarOrdenDeEjecucion();
 void bloquearESI(char*);
 void finalizarESI();
 void liberarRecursos();
+int desbloquearClave(char*);
 bool desbloquearDeCola(char*);
 float getResponseRatio(t_ESI*);
 bool algun_esi_es_id(t_list*, int);
