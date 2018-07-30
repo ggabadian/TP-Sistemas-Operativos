@@ -29,7 +29,8 @@ typedef struct {
 	int socket;
 	int listoDesde;
 	float estimado;  //no hace falta guardar el anterior y el proximo, cuando se calcula se pisa el anterior con el proximo
-	float real;
+	int real;
+	float remaining;
 } __attribute__((packed)) t_ESI;
 
 typedef struct {
@@ -45,6 +46,7 @@ void *consola();
 void *mainProgram();
 void agregarNuevoESIAColaDeListos(int, int);
 void agregarESIAColaDeListos(t_ESI*);
+void desalojar(t_ESI*);
 t_ESI *planificar ();
 t_ESI *sjfsd();
 t_ESI *sjfcd();
