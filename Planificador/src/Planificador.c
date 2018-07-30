@@ -393,6 +393,7 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	nuevoESI->idESI = id;
 	nuevoESI->socket = socketESI;
 	nuevoESI->estimado = ESTIMACION_I;
+	nuevoESI->remaining = ESTIMACION_I;
 	log_info(logPlanificador,"La estimacion del (nuevo) esi %d es %f.",nuevoESI->idESI, nuevoESI->estimado);
 	nuevoESI->listoDesde = systemClock;
 	nuevoESI->real = 0;
@@ -405,6 +406,7 @@ void agregarESIAColaDeListos(t_ESI *esi) {
 	log_info(logPlanificador, "La rafaga anterior del esi %d duró %d",esi->idESI,esi->real);
 	log_info(logPlanificador,"real: %d. EstimadoAnterior: %f. ALFA: %d",esi->real, esi->estimado, ALFA );
 	esi->estimado = (float)(ALFA / 100.0) * (float)(esi->real) + (float)((1 - (ALFA / 100.0)) * esi->estimado);
+	esi->remaining = esi->estimado;
 	log_info(logPlanificador,"La nueva estimacion del (pasado a ready) esi %d es %f",esi->idESI, esi->estimado);
 	esi->listoDesde = systemClock;
 	esi->real = 0;
@@ -414,18 +416,12 @@ void agregarESIAColaDeListos(t_ESI *esi) {
 }
 
 void desalojar(t_ESI *esi) {
-	log_info(logPlanificador, "La rafaga anterior del esi %d duró %d",esi->idESI,esi->real);
-	log_info(logPlanificador,"real: %d. EstimadoAnterior: %f.",esi->real, esi->estimado);
-	esi->estimado = (float)esi->estimado-(float)esi->real;
-	log_info(logPlanificador,"La nueva estimacion del (pasado a ready) esi %d es %f",esi->idESI, esi->estimado);
+	esi->remaining = (float)esi->estimado-(float)esi->real;
 	esi->listoDesde = systemClock;
-	esi->real = 0;
-	log_info(logPlanificador,"Se puso en 0 el real del esi %d. (Desalojado y pasado a listo).\n",esi->idESI);
 
 	list_add(listos, esi);
 }
 
-//-------------------------------------------------
 t_ESI *planificar() {
 	t_ESI *esi;
 	if(!list_is_empty(listos)){
@@ -467,7 +463,7 @@ t_ESI *sjfsd() {
 			// Guarda la instancia de ese index y lo incrementa
 			esi = list_get(listos, index++);
 
-			if (esi->estimado < esiElegido->estimado){
+			if (esi->remaining < esiElegido->remaining){
 				// Guarda la nueva instancia con mayor entradas libres como candidata
 				esiElegido = esi;
 				indexDefinitivo=index-1;
@@ -496,14 +492,14 @@ t_ESI *sjfcd() {
 			// Guarda la instancia de ese index y lo incrementa
 			esi = list_get(listos, index++);
 
-			if (esi->estimado < esiElegido->estimado){
+			if (esi->remaining < esiElegido->remaining){
 				// Guarda la nueva instancia con mayor entradas libres como candidata
 				esiElegido = esi;
 				indexDefinitivo=index-1;
 			}
 		}
 
-		if(running!=NULL && (running->estimado - running->real)<esiElegido->estimado){
+		if(running!=NULL && (running->estimado - running->real)<esiElegido->remaining){
 			log_info(logPlanificador,"El ESI %d conitnua ejecutando.\n",running->idESI);
 			return running;
 		}
@@ -537,13 +533,11 @@ t_ESI *hrrn() {
 		rrElegido=getResponseRatio(esiElegido);
 
 		while (index < list_size(listos)) {
-			// Guarda la instancia de ese index y lo incrementa
 			esi = list_get(listos, index++);
 			rr = getResponseRatio(esi);
-
 			if (rr > rrElegido){
-				// Guarda la nueva instancia con mayor entradas libres como candidata
 				esiElegido = esi;
+				rrElegido = rr;
 				indexDefinitivo=index-1;
 			}
 		}
@@ -558,9 +552,11 @@ t_ESI *hrrn() {
 }
 
 float getResponseRatio(t_ESI* esi){
-	int estimado = esi->estimado;
+	float estimado = esi->estimado;
 	int espera = systemClock-esi->listoDesde;
 	float rr = 1+espera/estimado;
+
+	log_info(logPlanificador,"El RR del esi %d es %f", esi->idESI, rr);
 
 	return rr;
 }
