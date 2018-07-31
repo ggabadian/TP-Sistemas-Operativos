@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 	PUNTERO_BSU = 0;
 
 	//para pruebas
-
+	/*
 	CANTIDAD_ENTRADAS = 10;
 	TAMANIO_ENTRADAS = 10;
 	TABLA_ENTRADAS = list_create();
@@ -38,21 +38,21 @@ int main(int argc, char* argv[]) {
 
 
 	//test_recibirSet("perrito", "perrito-bueno");
-	/*
+
 	for(i=0; i<CANTIDAD_ENTRADAS; i++){
 				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-	}*/
+	}
 
 	memset(&paqueteStore, 0, sizeof(t_store));
 	strcpy(paqueteStore.clave, "juani");
 	realizarStore("juani");
+	*/
 
 
-/*
 	while(CONNECTED){ //espera que llegue una operacion
 		puts("Disponible, esperando que el coordinador envie una sentencia");
 		recibirOperacion();
-	}*/
+	}
 
 	log_destroy(LOG_INSTANCIA);
 	free(ALMACENAMIENTO);
@@ -200,7 +200,6 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 }
 
 void realizarSet_Agregar(int entradasNecesarias){
-	int i;
 	t_entrada* dato = malloc(sizeof(t_entrada));
 	int noSeAgrego = 1;
 	int posicion;
@@ -227,10 +226,6 @@ void realizarSet_Agregar(int entradasNecesarias){
 		}else{
 			puts("Sin entradas, se corre el algoritmo\n");
 			correrAlgoritmoDeReemplazo();
-
-			for(i=0; i<CANTIDAD_ENTRADAS; i++){
-				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-			}
 		}
 	}
 }
@@ -311,12 +306,10 @@ void realizarStore(char* clave){
 
     strcpy(map, valor);
 
-	if (msync(map, tamanio, MS_SYNC) == -1) {
-		puts("no se sincronizo");
+	if (msync(map, tamanio, MS_SYNC) == -1) {puts("no se sincronizo");
 	}
 
-	if (munmap(map, tamanio) == -1) {
-		close(fd);
+	if (munmap(map, tamanio) == -1) {close(fd);
 	}
 
 	close(fd);
