@@ -38,14 +38,7 @@ esi:
 	$(COMPILER) -g -Wall ESI/src/ESI.h ESI/src/ESI.c ESI/src/configESI.c $(CLIENTE) $(LIBS)-lparsi -o $(BIN_PATH)/ESI
 
 installDependencies:
-	cd ..
-	git clone https://github.com/sisoputnfrba/so-commons-library.git
-	cd so-commons-library
-	sudo make install
-	cd ..
-	git clone https://github.com/sisoputnfrba/parsi.git
-	cd parsi
-	sudo make install
-	cd ..
-	cd tp-2018-1c-Microblando-Ventanas
-	
+	cd ../git clone https://github.com/sisoputnfrba/so-commons-library.git
+	cd so-commons-library/sudo make install
+	cd ../git clone https://github.com/sisoputnfrba/parsi.git
+	cd parsi/sudo make install
