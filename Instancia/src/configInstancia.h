@@ -1,6 +1,10 @@
 #ifndef INSTANCIA_SRC_CONFIGINSTANCIA_H_
 #define INSTANCIA_SRC_CONFIGINSTANCIA_H_
 
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
