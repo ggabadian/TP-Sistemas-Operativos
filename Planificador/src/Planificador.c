@@ -52,10 +52,12 @@ int main() {
 	log_info(logPlanificador, "PUERTO COORDINADOR= %s\n", PUERTO_COORDINADOR);
 
 	//Agrego las claves bloqueadas por archivo configuración a la lista de claves
-	//En la descripción agrego que son por archivo CONFIG ya que después servirá para calular el Deadlock
+
+	int *idEsiConfig = malloc(sizeof(int));
+	*idEsiConfig = -1;
 	for (int claveI = 0; CL_BLOQUEADAS[claveI] != NULL; claveI++) {
 		log_info(logPlanificador, "CLAVES BLOQUEADAS= %s", CL_BLOQUEADAS[claveI]);
-		dictionary_put(clavesBloqueadas, CL_BLOQUEADAS[claveI], "POR ARCHIVO CONFIG");
+		dictionary_put(clavesBloqueadas, CL_BLOQUEADAS[claveI], idEsiConfig);
 	}
 
 	//Creo los threads para la consola y el main Program
@@ -588,6 +590,7 @@ int desbloquearClave(char* clave){
 		t_ESI* procesoDesencolado = queue_pop((t_queue*)dictionary_get(colasBloqueados,clave));
 		agregarESIAColaDeListos(procesoDesencolado);
 		if(queue_is_empty((t_queue*)dictionary_get(colasBloqueados,clave))){
+			queue_destroy((t_queue*)dictionary_get(colasBloqueados,clave));
 			dictionary_remove(colasBloqueados,clave);
 		}
 		dictionary_remove(clavesBloqueadas,clave);
@@ -603,6 +606,7 @@ bool desbloquearDeCola(char* clave){
 		t_ESI* procesoDesencolado = queue_pop((t_queue*)dictionary_get(colasBloqueados,clave));
 		agregarESIAColaDeListos(procesoDesencolado);
 		if(queue_is_empty((t_queue*)dictionary_get(colasBloqueados,clave))){
+			queue_destroy((t_queue*)dictionary_get(colasBloqueados,clave));
 			dictionary_remove(colasBloqueados,clave);
 		}
 		return true;
@@ -730,7 +734,10 @@ void *consola() {
 			printf("Inserte Clave: ");
 			scanf("%s", clave);
 			if(dictionary_has_key(clavesBloqueadas,clave)){
-				printf("\nEl ESI %d tiene tomada la clave.\n\n",*(int*)dictionary_get(clavesBloqueadas,clave));
+				if (*(int*)dictionary_get(clavesBloqueadas,clave) != -1)
+					printf("\nEl ESI %d tiene tomada la clave.\n\n",*(int*)dictionary_get(clavesBloqueadas,clave));
+				else
+					printf("La clave se encuentra bloqueada por archivo de configuracion.\n\n");
 			}
 			else{
 				printf("\nNadie tiene tomada la clave.\n\n");
@@ -807,7 +814,8 @@ void *consola() {
 			break;
 
 		case 7:
-			puts("Los deadlocks existentes son:");
+			puts("Los deadlocks existentes son:\n");
+			dictionary_iterator(colasBloqueados,analizarDeadlock);
 			break;
 		default:
 			break;
@@ -825,6 +833,41 @@ void *consola() {
 	}while(!salir);
 
 	return NULL;
+}
+
+void analizarDeadlock (char* clave , void* colaGenerico){
+	t_queue* cola = (t_queue*)colaGenerico;
+	t_list* lista = cola->elements;
+	buscarDeadlock(lista, clave);
+}
+
+void buscarDeadlock(t_list* lista, char* clave){
+	void elementoDeadlock(void* esi){
+		int id = ((t_ESI*)esi)->idESI;
+		int esiTomador = *(int*)dictionary_get(clavesBloqueadas,clave);
+
+		char* claveQueEsperaElEsiTomador = buscarEnColasYRetornar(esiTomador);
+
+		if(claveQueEsperaElEsiTomador!=NULL && *(int*)dictionary_get(clavesBloqueadas,claveQueEsperaElEsiTomador)==id){
+			printf("Hay deadlock entre los ESIs %d y %d.\n", esiTomador, id);
+		}
+	}
+	list_iterate(lista, elementoDeadlock);
+}
+
+char* buscarEnColasYRetornar(int idBuscado){
+
+	char* claveCopia=NULL;
+
+	void buscarLaClaveQueEsperaElId (char* clave , void* cola){
+		t_list *lista = ((t_queue*)cola)->elements;
+		if (algun_esi_es_id(lista, idBuscado)){
+			claveCopia=clave;
+		}
+	}
+
+	dictionary_iterator(colasBloqueados,buscarLaClaveQueEsperaElId);
+	return claveCopia;
 }
 
 void recvStatus(int socket, char* clave){
@@ -898,6 +941,7 @@ void buscar_en_colas_y_remover(t_dictionary *diccionario, int idBuscado){
 
 	dictionary_iterator(diccionario,remover_de_cola_si_tiene_id);
 	if(queue_is_empty((t_queue*)dictionary_get(diccionario,claveCopia))){
+		queue_destroy((t_queue*)dictionary_get(diccionario,claveCopia));
 		dictionary_remove(diccionario,claveCopia);
 	}
 	free(claveCopia);
