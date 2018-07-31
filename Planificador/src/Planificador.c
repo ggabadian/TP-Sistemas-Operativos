@@ -593,7 +593,12 @@ int desbloquearClave(char* clave){
 			queue_destroy((t_queue*)dictionary_get(colasBloqueados,clave));
 			dictionary_remove(colasBloqueados,clave);
 		}
-		dictionary_remove(clavesBloqueadas,clave);
+
+		if(*(int*)dictionary_get(clavesBloqueadas,clave)==-1)
+			dictionary_remove(clavesBloqueadas,clave);
+		else
+			dictionary_remove_and_destroy(clavesBloqueadas,clave,free);
+
 		return procesoDesencolado->idESI;
 	} else{
 		return -1;
