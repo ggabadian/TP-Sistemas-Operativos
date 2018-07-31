@@ -28,19 +28,26 @@ int main(int argc, char* argv[]) {
 	TAMANIO_ENTRADAS = 10;
 	TABLA_ENTRADAS = list_create();
 	ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
+	memset(ALMACENAMIENTO, '\0', sizeof(ALMACENAMIENTO[0][0])*CANTIDAD_ENTRADAS*TAMANIO_ENTRADAS);
 
-	test_recibirSet("raquel", "raquelita-nos-salva-con-sus-teses-y-aspirinas");
-	test_recibirSet("claudio", "pelado-bueno");
-	test_recibirSet("juani", "cabezon-tonto");
-	test_recibirSet("claudio", "pelado");
-	test_recibirSet("juani", "cabezon-tonto-no-es-pero");
+	test_recibirSet("raquel", "raquelita-nos-salva-con-sus-teses-y-aspirinas\0");
+	test_recibirSet("claudio", "pelado-bueno\0");
+	test_recibirSet("juani", "cabezon-tonto\0");
+	test_recibirSet("claudio", "pelado\0");
+	test_recibirSet("juani", "cabezon-tonto-no-es-pero\0");
+
+
+	//test_recibirSet("perrito", "perrito-bueno");
 
 	for(i=0; i<CANTIDAD_ENTRADAS; i++){
-			printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
+				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
 	}
 
-	test_recibirSet("perrito", "perrito-bueno");
+	memset(&paqueteStore, 0, sizeof(t_store));
+	strcpy(paqueteStore.clave, "juani");
+	realizarStore("juani");
 	*/
+
 
 	while(CONNECTED){ //espera que llegue una operacion
 		puts("Disponible, esperando que el coordinador envie una sentencia");
@@ -60,7 +67,6 @@ void test_recibirSet(char* clave, char* valor){
 	paqueteSet.sizeValor = strlen(valor);
 	printf("clave: %s\n", paqueteSet.clave);
 	realizarSet(entradasNecesarias(paqueteSet.valor));
-	free(paqueteSet.valor);
 }
 
 void conectarCoordinador(){
@@ -92,18 +98,15 @@ void recibirOperacion(){
 		TAMANIO_ENTRADAS = paqueteInit.sizeofEntrada;
 		TABLA_ENTRADAS = list_create();
 		ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
-		puts("Se recibio el init");
+		memset(ALMACENAMIENTO, '\0', sizeof(ALMACENAMIENTO[0][0])*CANTIDAD_ENTRADAS*TAMANIO_ENTRADAS);
 		break;
 	case OPERACION_SET:
 		recvSet(SOCKET_COORDINADOR, &paqueteSet);
-		printf("test: %s\n", paqueteSet.valor);
-		puts("Se recibio un set");
 		realizarSet(entradasNecesarias(paqueteSet.valor));
 		break;
 	case OPERACION_STORE:
 		recv(SOCKET_COORDINADOR, &paqueteStore, header.mSize, 0);
 		realizarStore(paqueteStore.clave);
-		puts("Se recibio un store");
 		break;
 	case OPERACION_COMPACTAR:
 		compactar();
@@ -135,7 +138,6 @@ int entradasNecesarias(char* valor){
 	if(cantidad*TAMANIO_ENTRADAS < largoString){
 		cantidad++;
 	}
-	printf("Cantidad entradas: %d\n", cantidad);
 	return cantidad;
 }
 
@@ -191,18 +193,18 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 			seguir = false;
 		}
 		ALMACENAMIENTO[posicion+nEntrada]= valorAgrabar;
-		free(valorAgrabar);
-		++nEntrada;
+		nEntrada++;
 	}
+	//free(valorAgrabar);
+	//creo que se deberia liberar aca, pero si lo hago se me rompe el printf y no se pq
 }
 
 void realizarSet_Agregar(int entradasNecesarias){
-	int i;
 	t_entrada* dato = malloc(sizeof(t_entrada));
-	//int noSeAgrego = 1;
+	int noSeAgrego = 1;
 	int posicion;
 
-	//while(noSeAgrego){
+	while(noSeAgrego){
 		if(hayEntradasDisponibles(entradasNecesarias)){
 			puts("si, hay entradas\n");
 			if(hayEspacioContiguo(entradasNecesarias, &posicion)){
@@ -215,20 +217,17 @@ void realizarSet_Agregar(int entradasNecesarias){
 
 				list_add(TABLA_ENTRADAS, dato);
 				almacenarDato(posicion, paqueteSet.valor, entradasNecesarias);
-				//noSeAgrego = 0;
+				noSeAgrego = 0;
 			}else{
 				puts("No hay espacios contiguos\n");
-				enviarOrdenDeCompactar();
+				compactar();
+				//enviarOrdenDeCompactar();
 			}
 		}else{
 			puts("Sin entradas, se corre el algoritmo\n");
 			correrAlgoritmoDeReemplazo();
-
-			for(i=0; i<CANTIDAD_ENTRADAS; i++){
-				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-			}
 		}
-	//}
+	}
 }
 
 void realizarSet_Actualizar(int entradasNecesarias){
@@ -279,7 +278,54 @@ void enviarOrdenDeCompactar(){
 }
 
 void realizarStore(char* clave){
+	char* valor = obtenerValor(clave);
+	char* archivo = string_new();
+	size_t tamanio;
+	string_append(&archivo, PUNTO_MONTAJE);
+	string_append(&archivo, clave);
+	string_append(&archivo, ".txt");
+	tamanio = string_length(valor) + 1;
+	//se garantiza la existencia del punto de montaje
+#if defined(_WIN32)
+	_mkdir(PUNTO_MONTAJE);
+#else
+	mkdir(PUNTO_MONTAJE, 0700);
+#endif
+	// Se abre el fichero a escribir.
+	int fd = open( archivo, O_RDWR | O_TRUNC | O_CREAT, (mode_t) 0600);
+	// Se redimensiona el fichero segun lo que se va a escribir.
+	if (lseek(fd, tamanio - 1, SEEK_SET) == -1) { close(fd);
+	}else{
+	// Prueba permiso de escritura... escribiendo :)
+	if (write(fd, " ", 1) == -1) { close(fd);
+    }else{
+   	// Ahora mapeamos (asociamos) la memoria con el espacio en disco
+   	char* map = mmap(0, tamanio, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED, fd, 0);
+   	if (map == MAP_FAILED) { close(fd);
+    }else{
 
+    strcpy(map, valor);
+
+	if (msync(map, tamanio, MS_SYNC) == -1) {puts("no se sincronizo");
+	}
+
+	if (munmap(map, tamanio) == -1) {close(fd);
+	}
+
+	close(fd);
+	free(archivo);
+    }}}
+}
+
+char* obtenerValor(char* clave){
+	int i;
+	char* valor= string_new();
+	t_entrada* dato= obtenerDato(clave);
+
+	for(i=0;i<dato->cantidadUtilizada;i++){
+		string_append(&valor,ALMACENAMIENTO[dato->posicion+i]);
+	}
+	return valor;
 }
 
 void correrAlgoritmoDeReemplazo(){
@@ -340,7 +386,60 @@ void algoritmoBSU(){
 }
 
 void compactar(){
+	int i;
+	int j;
+	int cantidadNull;
+	int posicionNull;
+	int buscandoNulos;
+	int buscandoNulosContiguos;
+	t_entrada* dato;
 
+	bool seguir = true;
+
+	while(seguir){
+		//1- busco el primer null
+		cantidadNull = 0;
+		posicionNull = -1;
+		buscandoNulos = 1;
+		i= 0;
+		while(buscandoNulos){
+			if (ALMACENAMIENTO[i]==NULL){
+				cantidadNull = 1;
+				posicionNull = i;
+				buscandoNulos= 0;
+				i++;
+			}else{
+				i++;
+				if(i>= CANTIDAD_ENTRADAS){
+					buscandoNulos =0;
+					seguir= false;
+				}
+			}
+		}
+		//2 - cuento nuelos contiguos
+		buscandoNulosContiguos= 1;
+		while(buscandoNulosContiguos){
+			if (ALMACENAMIENTO[i]==NULL){
+				cantidadNull++;
+				i++;
+			}else{
+				buscandoNulosContiguos = 0;
+			}
+			if(i>= CANTIDAD_ENTRADAS){
+				buscandoNulosContiguos =0;
+				seguir= false;
+			}
+		}
+		if(seguir){
+			//3 - ubico entrada del dato siguiente a null
+			dato = obtenerDato_posicion(i);
+			dato->posicion -= cantidadNull;
+			for(j=1;j<=dato->cantidadUtilizada;j++){
+				ALMACENAMIENTO[posicionNull+j-1] = ALMACENAMIENTO[posicionNull+j-1+cantidadNull];
+				ALMACENAMIENTO[posicionNull+j-1+cantidadNull] = NULL;
+			}
+		}
+	}
 }
 
 bool yaExisteClave(char* clave){

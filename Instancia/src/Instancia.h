@@ -27,8 +27,8 @@ typedef struct {
 	int tamanio;
 	int cantidadUtilizada;
 	int cantidadReferencias;
-
 }t_entrada;
+
 
 int CONNECTED;
 
@@ -56,5 +56,6 @@ void algoritmoCircular();
 void algoritmoLRU();
 void algoritmoBSU();
 t_entrada* obtenerDato_posicion(int posicion);
+char* obtenerValor(char* clave);
 
 #endif
