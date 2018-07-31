@@ -1,8 +1,8 @@
 
 #include "configPlanificador.h"
 
-void cargarConfigPlanificador() {
-	t_config *configPlanificador = config_create(PATH_PLANIFICADOR_CONFIG);
+void cargarConfigPlanificador(char* path) {
+	t_config *configPlanificador = config_create(path);
 
 	PUERTO = strdup(config_get_string_value(configPlanificador, "PUERTO"));
 	ALGORITMO = strdup(config_get_string_value(configPlanificador, "ALGORITMO"));

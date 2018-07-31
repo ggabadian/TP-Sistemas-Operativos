@@ -24,7 +24,7 @@ char *PUERTO_COORDINADOR;
 char** CL_BLOQUEADAS;
 // -----------------------------
 
-void cargarConfigPlanificador();
+void cargarConfigPlanificador(char*);
 
 // Ubicacion del archivo planificador.config
 #define PATH_PLANIFICADOR_CONFIG "/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/Planificador/planificador.config"

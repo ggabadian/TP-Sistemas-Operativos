@@ -8,7 +8,7 @@ int main(int argc, char** argv) {
 	logESI = log_create("../logs/logDeESI.log", "ESI", true, LOG_LEVEL_TRACE);
 	//se usa para escribir en el archivo de log y lo muestra por pantalla
 	log_trace(logESI, "Iniciando ESI");
-	cargarConfig();
+	cargarConfig(argv[2]);
 
 	t_head header;
 

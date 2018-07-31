@@ -19,7 +19,7 @@ t_ESI *running;
 
 fd_set master;
 
-int main() {
+int main(int argc, char* argv[]) {
 
 	int statusConsola, statusMainProgram;
 	pthread_t tConsola, tMainProgram;
@@ -42,7 +42,7 @@ int main() {
 	log_trace(logPlanificador, "\n\n\n\n\nIniciando Planificador\n\n\n\n");
 
 	// Cargo la configuración del Planificador desde el archivo config
-	cargarConfigPlanificador();
+	cargarConfigPlanificador(argv[1]);
 
 	log_info(logPlanificador, "PUERTO= %s", PUERTO);
 	log_info(logPlanificador, "ALGORITMO= %s", ALGORITMO);

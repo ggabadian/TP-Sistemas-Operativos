@@ -32,7 +32,7 @@ char *NOMBRE;
 int INTERVALO_DUMP;
 // -----------------------------
 
-void cargarConfig();
+void cargarConfig(char*);
 
 // Ubicacion del archivo instancia.config
 #define PATH_INSTANCIA_CONFIG "/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/Instancia/instancia.config"

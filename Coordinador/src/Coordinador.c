@@ -1,12 +1,12 @@
 #include "Coordinador.h"
 
-int main(void) {
+int main(int argc, char* argv[]) {
 	//creo el logger
 	logCoordinador = log_create("../logs/logCoordinador.log", "Coordinador", true, LOG_LEVEL_TRACE);
 	logDeOperaciones = log_create("../logs/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
 	log_trace(logCoordinador, "Iniciando Coordinador");
 
-	cargarConfig();
+	cargarConfig(argv[1]);
 	log_info(logCoordinador, "Configuración inicial realizada.");
 
 	if (!strcmp(ALGORITMO, "EL")) {
