@@ -300,6 +300,7 @@ void realizarSet_Actualizar(int entradasNecesarias){
 	cantidadEntradas = dato->cantidadUtilizada;
 
 	for(i=0;i<cantidadEntradas;i++){
+		free(ALMACENAMIENTO[posicion+i]); // Se libera lo que estaba almacenado
 		ALMACENAMIENTO[posicion+i] = NULL;
 	}
 
@@ -311,6 +312,7 @@ void realizarSet_Actualizar(int entradasNecesarias){
 		return false;
 	}
 	list_remove_by_condition(TABLA_ENTRADAS, esElDato);
+	free(dato); // Ya no se usa más así que se libera
 
 	realizarSet_Agregar(entradasNecesarias);
 	setearOperaciones(cantidadReferencias+1);
