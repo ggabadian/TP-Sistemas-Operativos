@@ -36,16 +36,15 @@ int CONNECTED;
 void enviarACoordinador(char* msg);
 void conectarCoordinador();
 void recibirOperacion();
-int main(int argc, char* argv[]);
 void realizarSet();
 bool hayEspacioContiguo(int tamanio, int* posicion);
 bool hayEntradasDisponibles(int tamanio);
 int entradasNecesarias(char* valor);
-void realizarStore(char clave[40]);
+bool realizarStore(char clave[40]);
 void correrAlgoritmoDeReemplazo();
 bool yaExisteClave(char clave[40]);
 void test_recibirSet(char* clave, char* valor);
-void atenderDump();
+void* atenderDump();
 void realizarDump();
 void enviarOrdenDeCompactar();
 void compactar();
@@ -57,5 +56,7 @@ void algoritmoLRU();
 void algoritmoBSU();
 t_entrada* obtenerDato_posicion(int posicion);
 char* obtenerValor(char* clave);
+char* valorEnDisco(char* clave);
+int main(int argc, char* argv[]);
 
 #endif

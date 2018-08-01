@@ -2,8 +2,8 @@
 
 int main(int argc, char* argv[]) {
 	//int i=0;
-	//int statusThread;
-	//pthread_t threadDump;
+	int statusThread=1;
+	pthread_t threadDump;
 
 	LOG_INSTANCIA = log_create("../logs/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
 	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
@@ -11,49 +11,56 @@ int main(int argc, char* argv[]) {
 	cargarConfig(argv[1]);
 
 	//se crea el hilo para atender el dump
-	/*
+
 	statusThread = pthread_create(&threadDump, NULL, &atenderDump, NULL);
 	if (statusThread){
 		log_error(LOG_INSTANCIA, "No se pudo crear el hilo para el Dump");
 	}
-	*/
+
 	conectarCoordinador();
 	PUNTERO_CIRCULAR = 0;
 	PUNTERO_LRU = 0;
 	PUNTERO_BSU = 0;
 
 	//para pruebas
-	/*
+
 	CANTIDAD_ENTRADAS = 10;
 	TAMANIO_ENTRADAS = 10;
 	TABLA_ENTRADAS = list_create();
 	ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
 	memset(ALMACENAMIENTO, '\0', sizeof(ALMACENAMIENTO[0][0])*CANTIDAD_ENTRADAS*TAMANIO_ENTRADAS);
 
+	/*
 	test_recibirSet("raquel", "raquelita-nos-salva-con-sus-teses-y-aspirinas\0");
 	test_recibirSet("claudio", "pelado-bueno\0");
 	test_recibirSet("juani", "cabezon-tonto\0");
 	test_recibirSet("claudio", "pelado\0");
 	test_recibirSet("juani", "cabezon-tonto-no-es-pero\0");
+*/
 
 
 	//test_recibirSet("perrito", "perrito-bueno");
-
+/*
 	for(i=0; i<CANTIDAD_ENTRADAS; i++){
 				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-	}
+	}*/
 
+	/*
+	puts("llego aca\n");
 	memset(&paqueteStore, 0, sizeof(t_store));
-	strcpy(paqueteStore.clave, "juani");
-	realizarStore("juani");
-	*/
+	strcpy(paqueteStore.clave, "claudio");
+	realizarStore("claudio");
+*/
+	puts("antes de llamar\n");
+	valorEnDisco("claudio");
 
-
+/*
 	while(CONNECTED){ //espera que llegue una operacion
-		puts("Disponible, esperando que el coordinador envie una sentencia");
+		log_trace(LOG_INSTANCIA, "Disponible, esperando nueva operacion");
 		recibirOperacion();
-	}
+	}*/
 
+	sleep(100);
 	log_destroy(LOG_INSTANCIA);
 	free(ALMACENAMIENTO);
 	return EXIT_SUCCESS;
@@ -103,12 +110,17 @@ void recibirOperacion(){
 	case OPERACION_SET:
 		recvSet(SOCKET_COORDINADOR, &paqueteSet);
 		realizarSet(entradasNecesarias(paqueteSet.valor));
+		log_trace(LOG_INSTANCIA,"SET-se setio la clave: %s , con el valor: %s", paqueteSet.clave, paqueteSet.valor);
 		break;
 	case OPERACION_STORE:
 		recv(SOCKET_COORDINADOR, &paqueteStore, header.mSize, 0);
-		realizarStore(paqueteStore.clave);
+		if (realizarStore(paqueteStore.clave)){
+			log_trace(LOG_INSTANCIA,"STORE- se guardo la clave %s", paqueteStore.clave);
+
+		}
+
 		break;
-	case OPERACION_COMPACTAR:
+	case ORDEN_COMPACTAR:
 		compactar();
 		break;
 	case ERROR_HEAD:
@@ -121,15 +133,21 @@ void recibirOperacion(){
 	}
 }
 
-void atenderDump(){
+void* atenderDump(){
 	while(CONNECTED){
 		sleep(INTERVALO_DUMP);
 		realizarDump();
 	}
+	return NULL;
 }
 
 void realizarDump(){
-
+	void realizarDump_dato(void* dato){
+		char* clave = ((t_entrada*)dato)->clave;
+		log_trace(LOG_INSTANCIA,"DUMP-se guarda en disco la clave: %s\n",clave);
+		realizarStore(clave);
+	}
+	list_iterate(TABLA_ENTRADAS, realizarDump_dato);
 }
 
 int entradasNecesarias(char* valor){
@@ -195,6 +213,7 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 		ALMACENAMIENTO[posicion+nEntrada]= valorAgrabar;
 		nEntrada++;
 	}
+	//free(valor);
 	//free(valorAgrabar);
 	//creo que se deberia liberar aca, pero si lo hago se me rompe el printf y no se pq
 }
@@ -269,16 +288,21 @@ void realizarSet(int entradasNecesarias){
 }
 
 void enviarOrdenDeCompactar(){
-	/*t_head header;
-	char* mensaje = "Hay que compactar";
-	header.context = necesidadCompactar;
-	header.mSize = strlen(mensaje);
+	t_head header;
+
+	header.context = ORDEN_COMPACTAR;
+	header.mSize = 0;
+
+	//informa al Coordinador que se necesita compactar
 	sendHead(SOCKET_COORDINADOR, header);
-	send(SOCKET_COORDINADOR, mensaje, strlen(mensaje), 0);*/
 }
 
-void realizarStore(char* clave){
+bool realizarStore(char* clave){
+
+	puts("llego aca 2");
 	char* valor = obtenerValor(clave);
+
+	if (strcmp(valor,"") != 0){
 	char* archivo = string_new();
 	size_t tamanio;
 	string_append(&archivo, PUNTO_MONTAJE);
@@ -294,27 +318,56 @@ void realizarStore(char* clave){
 	// Se abre el fichero a escribir.
 	int fd = open( archivo, O_RDWR | O_TRUNC | O_CREAT, (mode_t) 0600);
 	// Se redimensiona el fichero segun lo que se va a escribir.
-	if (lseek(fd, tamanio - 1, SEEK_SET) == -1) { close(fd);
+	if (lseek(fd, tamanio - 1, SEEK_SET) == -1) {
+		close(fd);
+		log_error(LOG_INSTANCIA,"MAP - No se puedo redimensionar el fichero. Clave: %s", clave);
+		free(valor);
+		free(archivo);
+		return false;
 	}else{
 	// Prueba permiso de escritura... escribiendo :)
-	if (write(fd, " ", 1) == -1) { close(fd);
+	if (write(fd, " ", 1) == -1) {
+		close(fd);
+		log_error(LOG_INSTANCIA,"MAP - No se puedo escribir el fichero. Clave: %s", clave);
+		free(valor);
+		free(archivo);
+		return false;
     }else{
    	// Ahora mapeamos (asociamos) la memoria con el espacio en disco
    	char* map = mmap(0, tamanio, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED, fd, 0);
-   	if (map == MAP_FAILED) { close(fd);
+   	if (map == MAP_FAILED) {
+   		close(fd);
+   		log_error(LOG_INSTANCIA,"MAP - Fallo el mmap. Clave: %s", clave);
+   		free(valor);
+   		free(archivo);
+   		return false;
     }else{
 
     strcpy(map, valor);
 
-	if (msync(map, tamanio, MS_SYNC) == -1) {puts("no se sincronizo");
+	if (msync(map, tamanio, MS_SYNC) == -1) {
+		log_error(LOG_INSTANCIA,"MAP - No se puedo sincronizar el fichero. Clave: %s", clave);
+		close(fd);
+		free(valor);
+		free(archivo);
+		return false;
 	}
 
-	if (munmap(map, tamanio) == -1) {close(fd);
+	if (munmap(map, tamanio) == -1) {
+		close(fd);
+		log_error(LOG_INSTANCIA,"MAP - Fallo el munmap. Clave: %s", clave);
+		free(valor);
+		free(archivo);
+		return false;
 	}
 
 	close(fd);
 	free(archivo);
-    }}}
+	free(valor);
+	return true;
+    }}}}
+	free(valor);
+	return false;
 }
 
 char* obtenerValor(char* clave){
@@ -322,8 +375,12 @@ char* obtenerValor(char* clave){
 	char* valor= string_new();
 	t_entrada* dato= obtenerDato(clave);
 
-	for(i=0;i<dato->cantidadUtilizada;i++){
-		string_append(&valor,ALMACENAMIENTO[dato->posicion+i]);
+	if (dato != NULL){
+		for(i=0;i<dato->cantidadUtilizada;i++){
+			string_append(&valor,ALMACENAMIENTO[dato->posicion+i]);
+		}
+	}else{
+		log_error(LOG_INSTANCIA,"STORE - La clave %s fue reeemplazada", clave);
 	}
 	return valor;
 }
@@ -476,4 +533,88 @@ t_entrada* obtenerDato_posicion(int posicion){
 	return dato;
 }
 
+size_t tamanioArchivo(char* archivo) {
+    struct stat estadistico;
+    stat(archivo, &estadistico);
+    return estadistico.st_size;
+}
+
+char* valorEnDisco(char* clave){
+	char* archivo = string_new();
+	size_t tamanio;
+	string_append(&archivo, PUNTO_MONTAJE);
+	string_append(&archivo, clave);
+	string_append(&archivo, ".txt");
+
+	//tamanio = tamanioArchivo(archivo);
+	int fd = open( archivo, O_RDONLY, (mode_t) 0600);
+
+	if (fd != -1){
+		puts("No se pudo abrir el archivo");
+	}
+
+	//vamos a medir el tamaño del archivo
+	struct stat fileInfo = {0};
+
+	if (fstat(fd, &fileInfo) == -1){
+		puts("No se pudo obtener el tamaño del dato");
+	}
+
+	if (fileInfo.st_size == 0){
+	    puts("El archivo estaba vacio");
+	}
+
+	printf("El tamaño es %ji\n", (intmax_t)fileInfo.st_size);
+
+
+
+	/*
+	 *
+    if (fd == -1)
+    {
+        perror("Error opening file for writing");
+        exit(EXIT_FAILURE);
+    }
+
+    struct stat fileInfo = {0};
+
+    if (fstat(fd, &fileInfo) == -1)
+    {
+        perror("Error getting the file size");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fileInfo.st_size == 0)
+    {
+        fprintf(stderr, "Error: File is empty, nothing to do\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("File size is %ji\n", (intmax_t)fileInfo.st_size);
+
+    char *map = mmap(0, fileInfo.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    if (map == MAP_FAILED)
+    {
+        close(fd);
+        perror("Error mmapping the file");
+        exit(EXIT_FAILURE);
+    }
+
+    for (off_t i = 0; i < fileInfo.st_size; i++)
+    {
+        printf("Found character %c at %ji\n", map[i], (intmax_t)i);
+    }
+
+    // Don't forget to free the mmapped memory
+    if (munmap(map, fileInfo.st_size) == -1)
+    {
+        close(fd);
+        perror("Error un-mmapping the file");
+        exit(EXIT_FAILURE);
+    }
+
+    // Un-mmaping doesn't close the file, so we still need to do that.
+    close(fd);
+    */
+}
 

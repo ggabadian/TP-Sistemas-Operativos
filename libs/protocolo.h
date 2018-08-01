@@ -39,7 +39,6 @@ typedef enum {
 	OPERACION_GET,
 	OPERACION_SET,
 	OPERACION_STORE,
-	OPERACION_COMPACTAR
 } e_context;
 // -----------------------
 
