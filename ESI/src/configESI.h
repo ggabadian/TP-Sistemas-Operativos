@@ -21,7 +21,7 @@ char *PUERTO_PLANIFICADOR;
 
 // -----------------------------
 
-void cargarConfig();
+void cargarConfig(char*);
 
 // Ubicacion del archivo coordinador.config
 #define PATH_ESI_CONFIG "/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/ESI/ESI.config"

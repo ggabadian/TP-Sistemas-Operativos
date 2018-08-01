@@ -64,6 +64,10 @@ bool algun_esi_es_id(t_list*, int);
 t_ESI* remover_esi_con_id(t_list*, int);
 void buscar_en_colas_y_remover(t_dictionary*, int);
 void recvStatus(int, char*);
+void remover_de_cola_si_tiene_id (char*, void*);
+void analizarDeadlock(char*, void*);
+void buscarDeadlock(t_list*, char*);
+char* buscarEnColasYRetornar(int);
 
 
 

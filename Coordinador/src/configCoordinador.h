@@ -13,7 +13,7 @@ int BYTES_ENTRADA;
 int RETARDO;
 // -----------------------------
 
-void cargarConfig();
+void cargarConfig(char*);
 
 // Ubicacion del archivo coordinador.config
 #define PATH_COORDINADOR_CONFIG "/home/utnso/workspace/tp-2018-1c-Microblando-Ventanas/Coordinador/coordinador.config"
