@@ -116,6 +116,8 @@ void conectarCoordinador(){
 
 void recibirOperacion(){
 	t_head header = recvHead(SOCKET_COORDINADOR);
+	char unaClave[MAX_CLAVE];
+	char *unValor;
 	switch(header.context){
 	case INIT_INSTANCIA:
 		recv(SOCKET_COORDINADOR, &paqueteInit, header.mSize,0);
@@ -136,15 +138,21 @@ void recibirOperacion(){
 			log_trace(LOG_INSTANCIA,"STORE- se guardo la clave %s", paqueteStore.clave);
 
 		}
-
 		break;
-
 	case REINCORPORACION_INSTANCIA:
 		//recibir el sring con todas las claves a levantar de disco
 
 		break;
 	case ORDEN_COMPACTAR:
 		compactar();
+		break;
+	case statusValor:
+		recv(SOCKET_COORDINADOR, unaClave, header.mSize, 0);
+		unValor = obtenerValor(unaClave);
+		header.mSize = strlen(unValor) + 1;
+		sendHead(SOCKET_COORDINADOR, header);
+		send(SOCKET_COORDINADOR, unValor, header.mSize, 0);
+		free(unValor);
 		break;
 	case ERROR_HEAD:
 		CONNECTED = 0;

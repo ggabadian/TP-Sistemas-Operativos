@@ -281,6 +281,10 @@ void* threadInstancia(void* socket) {
 				instanciasCompactando --;
 				//fin mutex
 				break;
+			case statusValor:
+				valorDeClave = malloc(header.mSize);
+				recv(socketInstancia, valorDeClave, header.mSize, 0);
+				break;
 			default:
 				break;
 		}
@@ -629,19 +633,22 @@ void sendStatus(char* clave){
 	t_instancia *instanciaActual = instanciaConClave(clave);
 	t_instancia *instanciaPosible;
 	int sizeValor = 0;
-	char* valor;
 	int sizeNombreInstancia;
+	t_head header;
 
 	if (instanciaActual != NULL) {
 		instanciaPosible = instanciaActual;
+		if (!desconectado(instanciaActual->socket)){
+			header.context = statusValor;
+			header.mSize = MAX_CLAVE;
+			sendHead(instanciaActual->socket, header);
+			send(instanciaActual->socket, clave, header.mSize, 0);
+			while(valorDeClave == NULL) usleep(100000);
+			sizeValor = strlen(valorDeClave) + 1;
+		}
 	} else {
 		instanciaPosible = distribuirStatus(clave);
 	}
-
-	//(Pendiente) Preguntar a la instancia por el valor asociado a la clave
-	// Esto va en el threadInstancia
-	// recv tamaño de valor
-	// recv valor
 
 	int packageSize = sizeof(sizeValor) + sizeValor + 2 * (sizeof(sizeNombreInstancia));
 	if (instanciaActual != NULL) packageSize += strlen(instanciaActual->nombre) + 1;
@@ -658,7 +665,7 @@ void sendStatus(char* clave){
 
 	if (sizeValor != 0){
 		sizeToSend = sizeValor;
-		memcpy(serializedPackage + offset, valor, sizeToSend);
+		memcpy(serializedPackage + offset, valorDeClave, sizeToSend);
 		offset += sizeToSend;
 	}
 
@@ -696,6 +703,8 @@ void sendStatus(char* clave){
 
 	send(socketConsola, serializedPackage, packageSize, 0);
 
+	free(valorDeClave);
+	valorDeClave = NULL;
 	free(serializedPackage);
 
 }

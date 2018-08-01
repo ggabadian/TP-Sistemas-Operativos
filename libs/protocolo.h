@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_CLAVE 40
+
 // -------- Contexto --------
 typedef enum {
 	COORDINADOR,
@@ -18,6 +20,7 @@ typedef enum {
 
 	CONSOLA,
 	statusClave,
+	statusValor,
 	okRecibido, //Este header es sólo para probar la comunicación. Despúes deaparece.
 	cerrarConexion, //Este header es sólo para probar la comunicación. Despúes deaparece.
 
@@ -53,19 +56,19 @@ typedef struct {
 // ------------ ESTRUCTURAS COMPARTIDAS -------------
 
 typedef struct {
-	char clave[40]; // Por consigna: Las claves son de hasta 40 caracteres
+	char clave[MAX_CLAVE]; // Por consigna: Las claves son de hasta 40 caracteres
 	uint32_t idESI;
 } __attribute__((packed)) t_get;
 
 typedef struct {
-	char clave[40];
+	char clave[MAX_CLAVE];
 	uint32_t sizeValor;
 	char* valor;
 	uint32_t idESI;
 } t_set;
 
 typedef struct {
-	char clave[40];
+	char clave[MAX_CLAVE];
 	uint32_t idESI;
 } __attribute__((packed)) t_store;
 

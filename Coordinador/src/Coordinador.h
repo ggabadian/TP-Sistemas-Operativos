@@ -41,6 +41,8 @@ typedef struct {
 
 t_dictionary *clavesRegistradas; // CLAVE::INSTANCIA
 
+char *valorDeClave; // Acá se guarda el valor del status de consola
+
 void crearThread(e_context, int);
 void* threadPlanificador(void*);
 void* threadConsola(void*);

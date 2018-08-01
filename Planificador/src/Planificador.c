@@ -791,11 +791,11 @@ void *consola() {
 			scanf("%s", clave);
 
 			headerAEnviar.context = statusClave;
-			headerAEnviar.mSize = strlen(clave)+1;
+			headerAEnviar.mSize = MAX_CLAVE;
 			sendHead(coordinadorSocketConsola, headerAEnviar); // Le pido al Coordinador el comando Status Clave
 			log_trace(logPlanificador, "Se envió al coordinador la solicitud del status de la clave %s.\n", clave);
 
-			send(coordinadorSocketConsola,clave,strlen(clave)+1,0);
+			send(coordinadorSocketConsola,clave,headerAEnviar.mSize,0);
 
 			recvStatus(coordinadorSocketConsola, clave);
 
