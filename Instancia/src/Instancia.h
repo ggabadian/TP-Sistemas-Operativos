@@ -57,6 +57,11 @@ void algoritmoBSU();
 t_entrada* obtenerDato_posicion(int posicion);
 char* obtenerValor(char* clave);
 char* valorEnDisco(char* clave);
+void liberar(char* valor);
+void reincorporar(char* claves);
+void liberarAlmacenamiento();
+void liberarTablaEntradas();
+void setearOperaciones(int cantidad);
 int main(int argc, char* argv[]);
 
 #endif

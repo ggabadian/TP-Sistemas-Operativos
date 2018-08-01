@@ -1,7 +1,7 @@
 #include "Instancia.h"
 
 int main(int argc, char* argv[]) {
-	//int i=0;
+	//int i;
 	int statusThread=1;
 	pthread_t threadDump;
 
@@ -23,14 +23,14 @@ int main(int argc, char* argv[]) {
 	PUNTERO_BSU = 0;
 
 	//para pruebas
-
+/*
 	CANTIDAD_ENTRADAS = 10;
 	TAMANIO_ENTRADAS = 10;
 	TABLA_ENTRADAS = list_create();
 	ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
 	memset(ALMACENAMIENTO, '\0', sizeof(ALMACENAMIENTO[0][0])*CANTIDAD_ENTRADAS*TAMANIO_ENTRADAS);
 
-	/*
+
 	test_recibirSet("raquel", "raquelita-nos-salva-con-sus-teses-y-aspirinas\0");
 	test_recibirSet("claudio", "pelado-bueno\0");
 	test_recibirSet("juani", "cabezon-tonto\0");
@@ -40,30 +40,48 @@ int main(int argc, char* argv[]) {
 
 
 	//test_recibirSet("perrito", "perrito-bueno");
+
+	//reincorporar("claudio");
 /*
 	for(i=0; i<CANTIDAD_ENTRADAS; i++){
 				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-	}*/
-
+	}
+*/
 	/*
 	puts("llego aca\n");
 	memset(&paqueteStore, 0, sizeof(t_store));
 	strcpy(paqueteStore.clave, "claudio");
 	realizarStore("claudio");
 */
-	puts("antes de llamar\n");
-	valorEnDisco("claudio");
+	//valorEnDisco("claudio");
 
-/*
+
+
 	while(CONNECTED){ //espera que llegue una operacion
 		log_trace(LOG_INSTANCIA, "Disponible, esperando nueva operacion");
 		recibirOperacion();
-	}*/
+	}
 
-	sleep(100);
+	sleep(1);
 	log_destroy(LOG_INSTANCIA);
-	free(ALMACENAMIENTO);
+	liberarTablaEntradas();
+	liberarAlmacenamiento();
 	return EXIT_SUCCESS;
+}
+
+void liberarTablaEntradas(){
+	void destructor(void* dato){
+		free((t_entrada*)dato);
+	}
+	list_destroy_and_destroy_elements(TABLA_ENTRADAS, destructor);
+}
+
+void liberarAlmacenamiento(){
+	int i;
+	for(i= 0;i<CANTIDAD_ENTRADAS;i++){
+			free(ALMACENAMIENTO[i]);
+	}
+	free(ALMACENAMIENTO);
 }
 
 void test_recibirSet(char* clave, char* valor){
@@ -118,6 +136,11 @@ void recibirOperacion(){
 			log_trace(LOG_INSTANCIA,"STORE- se guardo la clave %s", paqueteStore.clave);
 
 		}
+
+		break;
+
+	case REINCORPORACION_INSTANCIA:
+		//recibir el sring con todas las claves a levantar de disco
 
 		break;
 	case ORDEN_COMPACTAR:
@@ -197,6 +220,12 @@ bool hayEspacioContiguo(int entradasNecesarias, int* posicion){
 	return false;
 }
 
+void liberar(char* valor){
+	if(valor != NULL){
+		free(valor);
+	}
+}
+
 void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 	char* valorAgrabar;
 	bool seguir = true;
@@ -210,11 +239,20 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 			valorAgrabar = valor ;
 			seguir = false;
 		}
+
 		ALMACENAMIENTO[posicion+nEntrada]= valorAgrabar;
+		ALMACENAMIENTO[posicion+nEntrada][strlen(valorAgrabar)]= '\0';
 		nEntrada++;
 	}
+/*
+	if(valor != NULL){
+		free(valor);
+	}*/
+	//liberar(valor);
+	//liberar(valorAgrabar);
 	//free(valor);
 	//free(valorAgrabar);
+
 	//creo que se deberia liberar aca, pero si lo hago se me rompe el printf y no se pq
 }
 
@@ -239,8 +277,8 @@ void realizarSet_Agregar(int entradasNecesarias){
 				noSeAgrego = 0;
 			}else{
 				puts("No hay espacios contiguos\n");
-				compactar();
-				//enviarOrdenDeCompactar();
+				//compactar();
+				enviarOrdenDeCompactar();
 			}
 		}else{
 			puts("Sin entradas, se corre el algoritmo\n");
@@ -256,6 +294,7 @@ void realizarSet_Actualizar(int entradasNecesarias){
 	int i;
 	int posicion;
 	int cantidadEntradas;
+	int cantidadReferencias;
 	dato             = obtenerDato(clave);
 	posicion         = dato->posicion;
 	cantidadEntradas = dato->cantidadUtilizada;
@@ -266,13 +305,15 @@ void realizarSet_Actualizar(int entradasNecesarias){
 
 	bool esElDato(void* dato){
 		if (strcmp(((t_entrada*)dato)->clave, clave)==0){
-					return true;
+			cantidadReferencias= ((t_entrada*)dato)->cantidadReferencias;
+			return true;
 		}
 		return false;
 	}
 	list_remove_by_condition(TABLA_ENTRADAS, esElDato);
 
 	realizarSet_Agregar(entradasNecesarias);
+	setearOperaciones(cantidadReferencias+1);
 }
 
 void realizarSet(int entradasNecesarias){
@@ -284,7 +325,13 @@ void realizarSet(int entradasNecesarias){
 	}else{
 		puts("no existe\n");
 		realizarSet_Agregar(entradasNecesarias);
+		setearOperaciones(1);
 	}
+}
+
+void setearOperaciones(int cantidad){
+	t_entrada* dato = obtenerDato(paqueteSet.clave);
+	dato->cantidadReferencias= 1;
 }
 
 void enviarOrdenDeCompactar(){
@@ -298,8 +345,6 @@ void enviarOrdenDeCompactar(){
 }
 
 bool realizarStore(char* clave){
-
-	puts("llego aca 2");
 	char* valor = obtenerValor(clave);
 
 	if (strcmp(valor,"") != 0){
@@ -499,6 +544,26 @@ void compactar(){
 	}
 }
 
+void reincorporar(char* claves){
+	int i=0;
+	char** clavesAleer = string_split(claves, ",");
+
+	while(clavesAleer[i] != NULL){
+		char * valor = valorEnDisco(clavesAleer[i]);
+		if (valor != NULL){
+			test_recibirSet(clavesAleer[i], valor);
+		}
+		i++;
+	}
+	i=0;
+	while(clavesAleer[i] != NULL){
+		puts("se libera posicion\n");
+		free(clavesAleer[i]);
+		i++;
+	}
+
+}
+
 bool yaExisteClave(char* clave){
 	bool claveBuscada(void* dato){
 		if (strcmp(((t_entrada*)dato)->clave, clave)==0){
@@ -533,88 +598,58 @@ t_entrada* obtenerDato_posicion(int posicion){
 	return dato;
 }
 
-size_t tamanioArchivo(char* archivo) {
-    struct stat estadistico;
-    stat(archivo, &estadistico);
-    return estadistico.st_size;
-}
-
 char* valorEnDisco(char* clave){
+	//en caso de que el valor retornado
+
 	char* archivo = string_new();
-	size_t tamanio;
 	string_append(&archivo, PUNTO_MONTAJE);
 	string_append(&archivo, clave);
 	string_append(&archivo, ".txt");
 
-	//tamanio = tamanioArchivo(archivo);
-	int fd = open( archivo, O_RDONLY, (mode_t) 0600);
+	int fd = open(archivo, O_RDONLY, (mode_t)0600);
 
-	if (fd != -1){
-		puts("No se pudo abrir el archivo");
-	}
+	if (fd == -1){
+		free(archivo);
+		log_error(LOG_INSTANCIA, "REINCORPORACION- error al arbir el archivo: %s", archivo);
+	}else{
 
-	//vamos a medir el tamaño del archivo
 	struct stat fileInfo = {0};
 
 	if (fstat(fd, &fileInfo) == -1){
-		puts("No se pudo obtener el tamaño del dato");
-	}
+		close(fd);
+		free(archivo);
+		log_error(LOG_INSTANCIA, "REINCORPORACION- error al obtener el tamaño del archivo");
+	}else{
 
 	if (fileInfo.st_size == 0){
-	    puts("El archivo estaba vacio");
+		close(fd);
+		free(archivo);
+		log_error(LOG_INSTANCIA, "REINCORPORACION- el archivo esta vacio");
+	}else{
+
+	char *map = mmap(0, fileInfo.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (map == MAP_FAILED){
+		close(fd);
+		free(archivo);
+		log_error(LOG_INSTANCIA, "REINCORPORACION - error al mapear");
+	}else{
+
+	int32_t tamanio = fileInfo.st_size + 1;
+	char* valor = malloc(tamanio);
+	memcpy(valor,map,fileInfo.st_size);
+	valor[fileInfo.st_size] = '\0';
+
+	if (munmap(map, fileInfo.st_size) == -1){
+		close(fd);
+		free(archivo);
+		log_error(LOG_INSTANCIA, "REINCORPORACION- error al unmapear");
 	}
-
-	printf("El tamaño es %ji\n", (intmax_t)fileInfo.st_size);
-
-
-
-	/*
-	 *
-    if (fd == -1)
-    {
-        perror("Error opening file for writing");
-        exit(EXIT_FAILURE);
-    }
-
-    struct stat fileInfo = {0};
-
-    if (fstat(fd, &fileInfo) == -1)
-    {
-        perror("Error getting the file size");
-        exit(EXIT_FAILURE);
-    }
-
-    if (fileInfo.st_size == 0)
-    {
-        fprintf(stderr, "Error: File is empty, nothing to do\n");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("File size is %ji\n", (intmax_t)fileInfo.st_size);
-
-    char *map = mmap(0, fileInfo.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    if (map == MAP_FAILED)
-    {
-        close(fd);
-        perror("Error mmapping the file");
-        exit(EXIT_FAILURE);
-    }
-
-    for (off_t i = 0; i < fileInfo.st_size; i++)
-    {
-        printf("Found character %c at %ji\n", map[i], (intmax_t)i);
-    }
-
-    // Don't forget to free the mmapped memory
-    if (munmap(map, fileInfo.st_size) == -1)
-    {
-        close(fd);
-        perror("Error un-mmapping the file");
-        exit(EXIT_FAILURE);
-    }
-
-    // Un-mmaping doesn't close the file, so we still need to do that.
-    close(fd);
-    */
+	close(fd);
+	free(archivo);
+	return valor;
+	}}}}
+	free(archivo);
+	close(fd);
+	return NULL;
 }
 
