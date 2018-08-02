@@ -6,8 +6,7 @@
 #include "../../libs/protocolo.h"
 
 int PUNTERO_CIRCULAR;
-int PUNTERO_LRU;
-int PUNTERO_BSU;
+int CONTROL_LRU;
 int SOCKET_COORDINADOR;
 int CANTIDAD_ENTRADAS;
 int TAMANIO_ENTRADAS;
@@ -26,7 +25,7 @@ typedef struct {
 	int posicion;
 	int tamanio;
 	int cantidadUtilizada;
-	int cantidadReferencias;
+	int controlLRU;
 }t_entrada;
 
 
@@ -57,11 +56,10 @@ void algoritmoBSU();
 t_entrada* obtenerDato_posicion(int posicion);
 char* obtenerValor(char* clave);
 char* valorEnDisco(char* clave);
-void liberar(char* valor);
 void reincorporar(char* claves);
 void liberarAlmacenamiento();
 void liberarTablaEntradas();
-void setearOperaciones(int cantidad);
+void aumentarLRU(char* clave);
 int main(int argc, char* argv[]);
 
 #endif
