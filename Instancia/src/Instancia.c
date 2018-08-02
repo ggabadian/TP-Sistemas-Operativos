@@ -148,7 +148,9 @@ void recibirOperacion(){
 
 		break;
 	case ORDEN_COMPACTAR:
+		header.context = FIN_COMPACTAR;
 		compactar();
+		sendHead(SOCKET_COORDINADOR, header);
 		realizarSet(entradasNecesarias(paqueteSet.valor));
 		break;
 	case statusValor:
