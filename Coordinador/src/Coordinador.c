@@ -155,7 +155,7 @@ void* threadESI(void* socket) {
 
 	while (connected) {
 		t_head header = recvHead(socketESI);
-		usleep(10000);// hardcodeado, despues cambiar por sleep(RETARDO);
+		usleep(RETARDO*1000); // El retardo es en milisegundos
 
 		switch(header.context){
 			case OPERACION_GET:
@@ -284,6 +284,12 @@ void* threadInstancia(void* socket) {
 			case statusValor:
 				valorDeClave = malloc(header.mSize);
 				recv(socketInstancia, valorDeClave, header.mSize, 0);
+				break;
+			case STORE_OK:
+				operacionStore = SUCCESS;
+				break;
+			case STORE_FAIL:
+				operacionStore = ERROR;
 				break;
 			default:
 				break;
@@ -501,9 +507,15 @@ bool distribuirStore(t_store paquete){
 	header.mSize = sizeof(t_store);
 
 	if(instancia != NULL){
+		operacionStore = WAITING;
 		sendHead(instancia->socket, header);
 		send(instancia->socket, &paquete, sizeof(paquete), 0);
-		return true;
+		while(operacionStore == WAITING) usleep(100000); // Espera su respuesta
+		if (operacionStore == SUCCESS){
+			return true;
+		} else {
+			return false;
+		}
 	} else {
 		puts("Error: No se encontró la instancia con esa clave.");
 		return false;
@@ -565,7 +577,7 @@ void enviarOrdenCompactar(){
 		}
 	}
 
-	while(instanciasCompactando > 0) sleep(1); // Se bloquea hasta que terminen de compactar
+	while(instanciasCompactando > 0) usleep(100000); // Se bloquea hasta que terminen de compactar
 
 	header.context = FIN_COMPACTAR;
 	header.mSize = 0;

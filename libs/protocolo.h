@@ -36,7 +36,8 @@ typedef enum {
 	ORDEN_COMPACTAR,
 	FIN_COMPACTAR,
 	NRO_ENTRADAS,
-	//errores de la instancia
+	STORE_OK,
+	STORE_FAIL,
 
 	// MENSAJES COMPARTIDOS
 	ERROR_HEAD,

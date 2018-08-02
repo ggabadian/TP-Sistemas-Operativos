@@ -141,7 +141,12 @@ void recibirOperacion(){
 		if (realizarStore(paqueteStore.clave)){
 			log_trace(LOG_INSTANCIA,"STORE- se guardo la clave %s", paqueteStore.clave);
 			aumentarLRU(paqueteStore.clave);
+			header.context = STORE_OK;
+		} else {
+			header.context = STORE_FAIL;
+			log_error(LOG_INSTANCIA,"STORE - No se encontró la clave: %s", paqueteStore.clave);
 		}
+		sendHead(SOCKET_COORDINADOR, header);
 		break;
 	case REINCORPORACION_INSTANCIA:
 		//recibir el sring con todas las claves a levantar de disco
@@ -348,8 +353,7 @@ void realizarSet_Agregar(int entradasNecesarias){
 				almacenarDato(posicion, paqueteSet.valor, entradasNecesarias);
 				noSeAgrego = 0;
 			}else{
-				compactar();
-				//enviarOrdenDeCompactar();
+				enviarOrdenDeCompactar();
 			}
 		}else{
 			correrAlgoritmoDeReemplazo();
