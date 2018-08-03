@@ -4,12 +4,23 @@ int main(int argc, char* argv[]) {
 	int statusThread=1;
 	pthread_t threadDump;
 
-	LOG_INSTANCIA = log_create("../logs/logDeInstancia.log", "Instancia", true, LOG_LEVEL_TRACE);
-	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
 
 	cargarConfig(argv[1]);
 
 	conectarCoordinador();
+
+	char * nombreArchivoLog = (char *) malloc(1 + strlen("../logs/")+ strlen(NOMBRE)+4);
+	strcpy(nombreArchivoLog, "../logs/");
+	strcat(nombreArchivoLog, NOMBRE);
+	strcat(nombreArchivoLog,".log");
+
+
+	LOG_INSTANCIA = log_create(nombreArchivoLog, NOMBRE, true, LOG_LEVEL_TRACE);
+	free(nombreArchivoLog);
+	log_trace(LOG_INSTANCIA, "Iniciando Instancia");
+
+	log_info(LOG_INSTANCIA, "Conectada a Coordinador.");
+
 
 	//se crea el hilo para atender el dump
 	statusThread = pthread_create(&threadDump, NULL, &atenderDump, NULL);
@@ -90,12 +101,11 @@ void liberarAlmacenamiento(){
 void test_recibirSet(char* clave, char* valor){
 	memset(&paqueteSet, 0, sizeof(t_set));
 	strcpy(paqueteSet.clave, clave);
-	paqueteSet.valor = malloc(strlen(valor)+1);
-	strcpy(paqueteSet.valor, valor);
+	paqueteSet.valor = valor;
 	paqueteSet.sizeValor = strlen(valor);
 	printf("clave: %s\n", paqueteSet.clave);
 	realizarSet(entradasNecesarias(paqueteSet.valor));
-	free(paqueteSet.valor);
+	free(valor);
 }
 
 void conectarCoordinador(){
@@ -114,7 +124,6 @@ void conectarCoordinador(){
 	sendHead(SOCKET_COORDINADOR, header);
 	send(SOCKET_COORDINADOR, NOMBRE, strlen(NOMBRE), 0);
 
-	log_info(LOG_INSTANCIA, "Conectada a Coordinador.");
 	CONNECTED = 1;
 }
 
@@ -160,9 +169,10 @@ void recibirOperacion(){
 		break;
 	case ORDEN_COMPACTAR:
 		header.context = FIN_COMPACTAR;
+		log_info(LOG_INSTANCIA, "Se recibio la orden de compactar");
 		compactar();
 		sendHead(SOCKET_COORDINADOR, header);
-		realizarSet(entradasNecesarias(paqueteSet.valor));
+		//realizarSet(entradasNecesarias(paqueteSet.valor));
 		break;
 	case statusValor:
 		recv(SOCKET_COORDINADOR, unaClave, header.mSize, 0);
@@ -361,6 +371,7 @@ void realizarSet_Agregar(int entradasNecesarias){
 			}else{
 				log_info(LOG_INSTANCIA, "Se necesita compactar, se envia peticion al coordinador");
 				enviarOrdenDeCompactar();
+				recibirOperacion();
 			}
 		}else{
 			correrAlgoritmoDeReemplazo();
@@ -530,12 +541,14 @@ void algoritmoCircular(){
 	log_info(LOG_INSTANCIA, "Se corre el algoritmo Circular");
 	while(mateAuno){
 		if(ALMACENAMIENTO[PUNTERO_CIRCULAR]== NULL){
-			PUNTERO_CIRCULAR++;
+			aumentarCircular();
 		}else{
 			dato = obtenerDato_posicion(PUNTERO_CIRCULAR);
 			cantidad = dato->cantidadUtilizada;
 			if (cantidad == 1){
 				//es un dato atomico->lo mato
+				clave = malloc(strlen(dato->clave)+1);
+				//clave = strdup(dato->clave);
 				strcpy(clave, dato->clave);
 				ALMACENAMIENTO[PUNTERO_CIRCULAR]= NULL;
 
@@ -547,10 +560,11 @@ void algoritmoCircular(){
 					}
 				list_remove_by_condition(TABLA_ENTRADAS, esElDato);
 
-				PUNTERO_CIRCULAR++;
+				aumentarCircular();
 				mateAuno = 0;
+				free(clave);
 			}else{
-				PUNTERO_CIRCULAR++;
+				aumentarCircular();
 			}
 		}
 	}
@@ -699,6 +713,7 @@ void mostarAlmacenamiento(){
 void reincorporar(char* claves){
 	int i=0;
 	char** clavesAleer = string_split(claves, ",");
+	free(claves);
 
 	while(clavesAleer[i] != NULL){
 		char * valor = valorEnDisco(clavesAleer[i]);
@@ -712,6 +727,7 @@ void reincorporar(char* claves){
 		free(clavesAleer[i]);
 		i++;
 	}
+	free(clavesAleer);
 
 }
 
@@ -802,5 +818,13 @@ char* valorEnDisco(char* clave){
 	free(archivo);
 	close(fd);
 	return NULL;
+}
+void aumentarCircular(){
+	if (PUNTERO_CIRCULAR==CANTIDAD_ENTRADAS){
+		PUNTERO_CIRCULAR=0;
+	}
+	else{
+		PUNTERO_CIRCULAR++;
+	}
 }
 

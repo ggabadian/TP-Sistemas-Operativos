@@ -19,7 +19,8 @@
 #define WAITING -1
 #define SUCCESS 0
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexInstanciasConectadas;
+
 
 // Las instancias que se conectan se guardan en esta lista
 t_list *instanciasRegistradas;

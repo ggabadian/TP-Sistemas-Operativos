@@ -1,7 +1,8 @@
 #include "Coordinador.h"
 
 int main(int argc, char* argv[]) {
-	//creo el logger
+	pthread_mutex_init(&mutexInstanciasConectadas, NULL);
+
 	logCoordinador = log_create("../logs/logCoordinador.log", "Coordinador", true, LOG_LEVEL_TRACE);
 	logDeOperaciones = log_create("../logs/logDeOperaciones.log", "Coordinador", true, LOG_LEVEL_TRACE);
 	log_trace(logCoordinador, "Iniciando Coordinador");
@@ -61,9 +62,6 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-//(Pendiente) BUG - Valgrind dice que podria estar perdiendo memoria
-//(Pendiente) Semaforos para el manejo de la lista de instancias conectadas
-
 void crearThread(e_context id, int socket) {
 	pthread_t thread;
 	int statusPlanificador = 1;
@@ -107,10 +105,6 @@ void crearThread(e_context id, int socket) {
 }
 
 void* threadPlanificador(void* socket) {
-	//int socketPlanificador = *(int*)socket;
-
-	//close(socketPlanificador);
-
 	return NULL;
 }
 
@@ -256,14 +250,14 @@ void* threadInstancia(void* socket) {
 		nombreDeInstancia = malloc(header.mSize + 1);
 		recv(socketInstancia, nombreDeInstancia, header.mSize, 0);
 		nombreDeInstancia[header.mSize] = '\0';
-		// inicio mutexInstanciasRegistradas
+		pthread_mutex_lock(&mutexInstanciasConectadas);
 		registrarInstancia(socketInstancia, nombreDeInstancia);
-		// fin mutexInstanciasRegistradas
+		pthread_mutex_unlock(&mutexInstanciasConectadas);
 	} else {
 		log_error(logCoordinador, "(INSTANCIA) No se recibió el nombre");
 		return NULL;
 	}
-
+	instancia = instanciaConSocket(socketInstancia);
 	header = recvHead(socketInstancia);
 	while(header.context != ERROR_HEAD){ // Se queda bloqueado hasta que se desconecte
 		switch (header.context){
@@ -271,14 +265,11 @@ void* threadInstancia(void* socket) {
 				enviarOrdenCompactar(); // Envia la orden de compactar a todas las instancias
 				break;
 			case NRO_ENTRADAS:
-				instancia = instanciaConSocket(socketInstancia);
 				if (instancia != NULL)
 					instancia->entradasLibres = header.mSize;
 				break;
 			case FIN_COMPACTAR:
-				//inicio mutex
 				instanciasCompactando --;
-				//fin mutex
 				break;
 			case statusValor:
 				valorDeClave = malloc(header.mSize);
@@ -298,6 +289,8 @@ void* threadInstancia(void* socket) {
 	log_info(logCoordinador, "(%s) Se perdió la conexión.", nombreDeInstancia);
 
 	close(socketInstancia);
+	instancia->socket = 0;
+
 	return NULL;
 }
 
@@ -324,6 +317,7 @@ void registrarInstancia(int socket, char* nombre){
 	header.context = REINCORPORACION_INSTANCIA;
 	header.mSize = 0;
 	int nroClaves = 0;
+	int memClaves = 0;
 	char* clavesParaMandar;
 
 	// Si el nombre no estaba registrado
@@ -341,9 +335,10 @@ void registrarInstancia(int socket, char* nombre){
 		instancia->nombre = nombre;
 		log_info(logCoordinador, "(%s) Se reincorporó.", instancia->nombre);
 		nroClaves = nroClavesAsociadas(instancia);
+		memClaves = memClavesAsociadas(instancia);
 		if(nroClaves > 0){
 			clavesParaMandar = clavesAsociadas(instancia);
-			header.mSize = nroClaves*MAX_CLAVE;
+			header.mSize = nroClaves+memClaves+1;
 		}
 	}
 	sendHead(socket, header);
@@ -373,7 +368,9 @@ bool distribuirSet(t_set paquete){
 	instancia = instanciaConClave(paquete.clave);
 	if(instancia != NULL){
 		if(!desconectado(instancia->socket)){
+			puts("instanciaConClave");
 			enviarSet(instancia, paquete);
+			log_info(logCoordinador, "(SET) Instancia elegida: %s (Entradas libres: %d).", instancia->nombre, instancia->entradasLibres);
 			return true;
 		} else { // La clave se encuentra en una instancia desconectada
 			dictionary_remove(clavesRegistradas, paquete.clave);
@@ -382,19 +379,19 @@ bool distribuirSet(t_set paquete){
 	}
 
 	if (!strcmp(ALGORITMO, "EL")) {
-		// inicio mutexInstanciasRegistradas
+		pthread_mutex_lock(&mutexInstanciasConectadas);
 		instancia = equitativeLoad();
-		// fin mutexInstanciasRegistradas
+		pthread_mutex_unlock(&mutexInstanciasConectadas);
 	}
 	else if (!strcmp(ALGORITMO, "LSU")) {
-		// inicio mutexInstanciasRegistradas
+		pthread_mutex_lock(&mutexInstanciasConectadas);
 		instancia = leastSpaceUsed();
-		// fin mutexInstanciasRegistradas
+		pthread_mutex_unlock(&mutexInstanciasConectadas);
 	}
 	else if (!strcmp(ALGORITMO, "KE")) {
-		// inicio mutexInstanciasRegistradas
+		pthread_mutex_lock(&mutexInstanciasConectadas);
 		instancia = keyExplicit(paquete.clave);
-		// fin mutexInstanciasRegistradas
+		pthread_mutex_unlock(&mutexInstanciasConectadas);
 	}
 	else {
 		log_error(logCoordinador, "(SET) No se pudo determinar el algoritmo de distribución");
@@ -402,10 +399,8 @@ bool distribuirSet(t_set paquete){
 	}
 
 	if(instancia != NULL){
-		//Para testear
-		printf("(Testing) Socket de la instancia elegida: %d\n", instancia->socket);
-		printf("(Testing) Cantidad libre de la instancia elegida: %d\n", instancia->entradasLibres);
 		enviarSet(instancia, paquete);
+		log_info(logCoordinador, "(SET) Instancia elegida: %s (Entradas libres: %d).", instancia->nombre, instancia->entradasLibres);
 		return true;
 	} else {
 		log_error(logCoordinador, "(SET) No hay ninguna instancia para recibir la solicitud.");
@@ -740,21 +735,21 @@ t_instancia* distribuirStatus(char* clave){
 	int auxIndexEquitativeLoad = 0;
 
 		if (!strcmp(ALGORITMO, "EL")) {
-			// inicio mutexInstanciasRegistradas
+			pthread_mutex_lock(&mutexInstanciasConectadas);
 			auxIndexEquitativeLoad = indexEquitativeLoad;
 			instancia = equitativeLoad();
 			indexEquitativeLoad = auxIndexEquitativeLoad; // Para que no tenga efecto real
-			// fin mutexInstanciasRegistradas
+			pthread_mutex_unlock(&mutexInstanciasConectadas);
 		}
 		else if (!strcmp(ALGORITMO, "LSU")) {
-			// inicio mutexInstanciasRegistradas
+			pthread_mutex_lock(&mutexInstanciasConectadas);
 			instancia = leastSpaceUsed();
-			// fin mutexInstanciasRegistradas
+			pthread_mutex_unlock(&mutexInstanciasConectadas);
 		}
 		else if (!strcmp(ALGORITMO, "KE")) {
-			// inicio mutexInstanciasRegistradas
+			pthread_mutex_lock(&mutexInstanciasConectadas);
 			instancia = keyExplicit(clave);
-			// fin mutexInstanciasRegistradas
+			pthread_mutex_unlock(&mutexInstanciasConectadas);
 		}
 		else {
 			log_error(logCoordinador, "(STATUS) No se pudo determinar el algoritmo de distribución");
@@ -770,17 +765,22 @@ char* clavesAsociadas(t_instancia* instancia){
 	int index = 0;
 	int size = clavesRegistradas->table_max_size;
 	int memoriaNecesaria = memClavesAsociadas(instancia);
-	if (cantidadDeClaves > 0) clavesConcatenadas = malloc(memoriaNecesaria+cantidadDeClaves);
+	if (cantidadDeClaves > 0){
+		clavesConcatenadas = malloc(memoriaNecesaria+cantidadDeClaves+1);
+		clavesConcatenadas[0]='\0';
+	}
+
 	while(index < size){
 		t_hash_element *element = clavesRegistradas->elements[index];
 		if (cantidadDeClaves > 0){
 			while(element != NULL){
 				t_hash_element *nextElement = element->next;
 				if(instancia == (t_instancia*)(element->data)){
-					//memcpy(clavesConcatenadas + offset, element->key, MAX_CLAVE);
+					char* coma = malloc(2);
+						strcpy(coma,",");
 					strcat(clavesConcatenadas, element->key);
-					strcat(clavesConcatenadas, ",");
-					//offset += MAX_CLAVE;
+					strcat(clavesConcatenadas, coma);
+					free(coma);
 				}
 				element = nextElement;
 			}
