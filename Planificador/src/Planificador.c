@@ -297,6 +297,8 @@ void *mainProgram() {
 						if (header.context == ERROR_HEAD) {
 							close(i);
 							FD_CLR(i, &master); // remove from master set
+							idESICaido=
+							log_info(logPlanificador,"Se desconectó el ESI %d.\n",idESICaido);
 						} else {
 							// we got some data from an ESI
 							//char* clave = malloc(header.mSize); //esto no se por que lo habiamos puesto
@@ -593,8 +595,10 @@ int desbloquearClave(char* clave){
 			queue_destroy((t_queue*)dictionary_get(colasBloqueados,clave));
 			dictionary_remove(colasBloqueados,clave);
 		}
-
-		if(*(int*)dictionary_get(clavesBloqueadas,clave)==-1)
+		if ((int*)dictionary_get(clavesBloqueadas,clave)== NULL){
+			printf("Nadie tenía tomada la clave\n");
+		}
+		else if(*(int*)dictionary_get(clavesBloqueadas,clave)==-1)
 			dictionary_remove(clavesBloqueadas,clave);
 		else
 			dictionary_remove_and_destroy(clavesBloqueadas,clave,free);
