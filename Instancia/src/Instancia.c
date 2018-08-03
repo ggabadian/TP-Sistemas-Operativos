@@ -95,6 +95,7 @@ void test_recibirSet(char* clave, char* valor){
 	paqueteSet.sizeValor = strlen(valor);
 	printf("clave: %s\n", paqueteSet.clave);
 	realizarSet(entradasNecesarias(paqueteSet.valor));
+	free(paqueteSet.valor);
 }
 
 void conectarCoordinador(){
@@ -276,7 +277,7 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 		ALMACENAMIENTO[posicion+nEntrada][strlen(valorAgrabar)]= '\0';
 		nEntrada++;
 	}
-
+	mostarAlmacenamiento();
 
 	//char* valorAgrabar;
 //int i;
@@ -358,6 +359,7 @@ void realizarSet_Agregar(int entradasNecesarias){
 				almacenarDato(posicion, paqueteSet.valor, entradasNecesarias);
 				noSeAgrego = 0;
 			}else{
+				log_info(LOG_INSTANCIA, "Se necesita compactar, se envia peticion al coordinador");
 				enviarOrdenDeCompactar();
 			}
 		}else{
@@ -524,6 +526,8 @@ void algoritmoCircular(){
 	int cantidad;
 	t_entrada* dato;
 	char* clave;
+
+	log_info(LOG_INSTANCIA, "Se corre el algoritmo Circular");
 	while(mateAuno){
 		if(ALMACENAMIENTO[PUNTERO_CIRCULAR]== NULL){
 			PUNTERO_CIRCULAR++;
@@ -556,6 +560,8 @@ void algoritmoLRU(){
 	t_entrada* datoAmatar = NULL;
 	int minimo = 1000000;
 
+	log_info(LOG_INSTANCIA, "Se corre el algoritmo LRU");
+
 	void minimoLRU(void* dato){
 		if (((t_entrada*)dato)->cantidadUtilizada == 1){
 			if (((t_entrada*)dato)->controlLRU < minimo){
@@ -586,6 +592,8 @@ void algoritmoBSU(){
 	t_entrada* datoAmatar = NULL;
 	int maximo = 0;
 	int controlUltimoSelecto;
+
+	log_info(LOG_INSTANCIA, "Se corre el algoritmo BSU");
 
 	void maximoBSU(void* dato){
 		if (((t_entrada*)dato)->cantidadUtilizada == 1){
@@ -678,6 +686,14 @@ void compactar(){
 			}
 		}
 	}
+	mostarAlmacenamiento();
+}
+
+void mostarAlmacenamiento(){
+	int i;
+	for(i=0;i<CANTIDAD_ENTRADAS;i++){
+		log_info(LOG_INSTANCIA, "Almacenamiento [%d] = %s", i, ALMACENAMIENTO[i]);
+	}
 }
 
 void reincorporar(char* claves){
@@ -698,7 +714,6 @@ void reincorporar(char* claves){
 	}
 
 }
-
 
 bool yaExisteClave(char* clave){
 	bool claveBuscada(void* dato){
@@ -746,7 +761,7 @@ char* valorEnDisco(char* clave){
 
 	if (fd == -1){
 		free(archivo);
-		log_error(LOG_INSTANCIA, "REINCORPORACION- error al arbir el archivo: %s", archivo);
+		log_error(LOG_INSTANCIA, "REINCORPORACION- La clave no fue guardada: %s", archivo);
 	}else{
 
 	struct stat fileInfo = {0};
