@@ -16,6 +16,8 @@
 #include <math.h>
 
 #define ERROR 1
+#define WAITING -1
+#define SUCCESS 0
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -32,6 +34,7 @@ t_log* logCoordinador;
 t_log* logDeOperaciones;
 
 int instanciasCompactando = 0;
+int operacionStore = WAITING;
 
 typedef struct {
 	char* nombre;
@@ -70,5 +73,8 @@ bool claveRegistrada(char*, t_instancia*);
 t_instancia* instanciaConSocket(int);
 void sendStatus(char*);
 t_instancia* distribuirStatus(char*);
+char* clavesAsociadas(t_instancia*);
+int nroClavesAsociadas(t_instancia*);
+int memClavesAsociadas(t_instancia*);
 
 #endif

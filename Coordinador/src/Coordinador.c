@@ -41,7 +41,8 @@ int main(int argc, char* argv[]) {
 		if (identificador.context == ERROR_HEAD) {
 			log_error(logCoordinador, "(HANDSHAKE) No se pudo identificar a la entidad. Conexión desconocida.\n");
 		} else {
-			log_info(logCoordinador, "Conectado a %s.", identificar(identificador.context));
+			if(identificador.context != CONSOLA)
+				log_info(logCoordinador, "Conectado a %s.", identificar(identificador.context));
 		}
 
 		if (identificador.context == PLANIFICADOR){
@@ -155,7 +156,7 @@ void* threadESI(void* socket) {
 
 	while (connected) {
 		t_head header = recvHead(socketESI);
-		usleep(10000);// hardcodeado, despues cambiar por sleep(RETARDO);
+		usleep(RETARDO*1000); // El retardo es en milisegundos
 
 		switch(header.context){
 			case OPERACION_GET:
@@ -244,7 +245,6 @@ void* threadESI(void* socket) {
 
 void* threadInstancia(void* socket) {
 	int socketInstancia = *(int*)socket;
-	int nroEntradasLibres = 0;
 	t_head header;
 	char* nombreDeInstancia;
 	t_instancia *instancia;
@@ -271,10 +271,9 @@ void* threadInstancia(void* socket) {
 				enviarOrdenCompactar(); // Envia la orden de compactar a todas las instancias
 				break;
 			case NRO_ENTRADAS:
-				recv(socketInstancia, &nroEntradasLibres, sizeof(uint32_t), MSG_WAITALL);
 				instancia = instanciaConSocket(socketInstancia);
 				if (instancia != NULL)
-					instancia->entradasLibres = nroEntradasLibres;
+					instancia->entradasLibres = header.mSize;
 				break;
 			case FIN_COMPACTAR:
 				//inicio mutex
@@ -284,6 +283,12 @@ void* threadInstancia(void* socket) {
 			case statusValor:
 				valorDeClave = malloc(header.mSize);
 				recv(socketInstancia, valorDeClave, header.mSize, 0);
+				break;
+			case STORE_OK:
+				operacionStore = SUCCESS;
+				break;
+			case STORE_FAIL:
+				operacionStore = ERROR;
 				break;
 			default:
 				break;
@@ -315,6 +320,11 @@ void sendInitInstancia(int socket) {
 
 void registrarInstancia(int socket, char* nombre){
 	t_instancia *instancia = instanciaRegistrada(nombre);
+	t_head header;
+	header.context = REINCORPORACION_INSTANCIA;
+	header.mSize = 0;
+	int nroClaves = 0;
+	char* clavesParaMandar;
 
 	// Si el nombre no estaba registrado
 	if (instancia == NULL){
@@ -322,15 +332,26 @@ void registrarInstancia(int socket, char* nombre){
 		nuevaInstancia->nombre = nombre;
 		nuevaInstancia->socket = socket;
 		nuevaInstancia->entradasLibres = CANTIDAD_ENTRADAS;
-		//nuevaInstancia->claves = list_create();
 
 		list_add(instanciasRegistradas,nuevaInstancia);
 	} else {
 		// Actualiza el socket
 		instancia->socket = socket;
+		free(instancia->nombre);
+		instancia->nombre = nombre;
 		log_info(logCoordinador, "(%s) Se reincorporó.", instancia->nombre);
+		nroClaves = nroClavesAsociadas(instancia);
+		if(nroClaves > 0){
+			clavesParaMandar = clavesAsociadas(instancia);
+			header.mSize = nroClaves*MAX_CLAVE;
+		}
 	}
-	//free(nuevaInstancia); // Hay que liberarla pero aca no es
+	sendHead(socket, header);
+	if (header.mSize != 0) {
+		send(socket, clavesParaMandar, header.mSize, 0);
+		free(clavesParaMandar);
+	}
+
 }
 
 t_instancia *instanciaRegistrada(char* nombre){
@@ -391,6 +412,7 @@ bool distribuirSet(t_set paquete){
 		free(paquete.valor);
 		return false;
 	}
+
 }
 
 t_instancia* equitativeLoad(){
@@ -484,8 +506,6 @@ void enviarSet(t_instancia *instancia, t_set paquete){
 	sendHead(instancia->socket, header);
 	sendSet(instancia->socket, &paquete);
 
-	instancia->entradasLibres--; //(Pendiente) Sacar
-
 	if (!(claveRegistrada(paquete.clave, instancia)))
 		dictionary_put(clavesRegistradas, paquete.clave, instancia);
 
@@ -501,9 +521,15 @@ bool distribuirStore(t_store paquete){
 	header.mSize = sizeof(t_store);
 
 	if(instancia != NULL){
+		operacionStore = WAITING;
 		sendHead(instancia->socket, header);
 		send(instancia->socket, &paquete, sizeof(paquete), 0);
-		return true;
+		while(operacionStore == WAITING) usleep(100000); // Espera su respuesta
+		if (operacionStore == SUCCESS){
+			return true;
+		} else {
+			return false;
+		}
 	} else {
 		puts("Error: No se encontró la instancia con esa clave.");
 		return false;
@@ -565,7 +591,7 @@ void enviarOrdenCompactar(){
 		}
 	}
 
-	while(instanciasCompactando > 0) sleep(1); // Se bloquea hasta que terminen de compactar
+	while(instanciasCompactando > 0) usleep(100000); // Se bloquea hasta que terminen de compactar
 
 	header.context = FIN_COMPACTAR;
 	header.mSize = 0;
@@ -736,4 +762,69 @@ t_instancia* distribuirStatus(char* clave){
 		}
 
 		return instancia;
+}
+
+char* clavesAsociadas(t_instancia* instancia){
+	int cantidadDeClaves = nroClavesAsociadas(instancia);
+	char* clavesConcatenadas;
+	int index = 0;
+	int size = clavesRegistradas->table_max_size;
+	int memoriaNecesaria = memClavesAsociadas(instancia);
+	if (cantidadDeClaves > 0) clavesConcatenadas = malloc(memoriaNecesaria+cantidadDeClaves);
+	while(index < size){
+		t_hash_element *element = clavesRegistradas->elements[index];
+		if (cantidadDeClaves > 0){
+			while(element != NULL){
+				t_hash_element *nextElement = element->next;
+				if(instancia == (t_instancia*)(element->data)){
+					//memcpy(clavesConcatenadas + offset, element->key, MAX_CLAVE);
+					strcat(clavesConcatenadas, element->key);
+					strcat(clavesConcatenadas, ",");
+					//offset += MAX_CLAVE;
+				}
+				element = nextElement;
+			}
+		}
+		index++;
+	}
+	if (cantidadDeClaves > 0){
+		return clavesConcatenadas;
+	} else {
+		return NULL;
+	}
+}
+
+int nroClavesAsociadas(t_instancia* instancia){
+	int cantidadDeClaves = 0;
+	int index = 0;
+	int size = clavesRegistradas->table_max_size;
+	while(index < size){
+		t_hash_element *element = clavesRegistradas->elements[index];
+		while(element != NULL){
+			t_hash_element *nextElement = element->next;
+			if(instancia == (t_instancia*)(element->data)){
+				cantidadDeClaves ++;
+			}
+			element = nextElement;
+		}
+		index++;
+	}
+	return cantidadDeClaves;
+}
+int memClavesAsociadas(t_instancia* instancia){
+	int memoriaClaves = 0;
+	int index = 0;
+	int size = clavesRegistradas->table_max_size;
+	while(index < size){
+		t_hash_element *element = clavesRegistradas->elements[index];
+		while(element != NULL){
+			t_hash_element *nextElement = element->next;
+			if(instancia == (t_instancia*)(element->data)){
+				memoriaClaves += strlen(element->key);
+			}
+			element = nextElement;
+		}
+		index++;
+	}
+	return memoriaClaves;
 }
