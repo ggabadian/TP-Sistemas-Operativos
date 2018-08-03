@@ -121,6 +121,7 @@ void recibirOperacion(){
 	t_head header = recvHead(SOCKET_COORDINADOR);
 	char unaClave[MAX_CLAVE];
 	char *unValor;
+	char *clavesPrevias;
 	switch(header.context){
 	case INIT_INSTANCIA:
 		recv(SOCKET_COORDINADOR, &paqueteInit, header.mSize,0);
@@ -150,7 +151,11 @@ void recibirOperacion(){
 		break;
 	case REINCORPORACION_INSTANCIA:
 		//recibir el sring con todas las claves a levantar de disco
-
+		if (header.mSize != 0){
+			clavesPrevias = malloc(header.mSize);
+			recv(SOCKET_COORDINADOR, clavesPrevias, header.mSize, MSG_WAITALL);
+			reincorporar(clavesPrevias);
+		}
 		break;
 	case ORDEN_COMPACTAR:
 		header.context = FIN_COMPACTAR;
@@ -391,6 +396,8 @@ void realizarSet_Actualizar(int entradasNecesarias){
 }
 
 void realizarSet(int entradasNecesarias){
+	t_head headerInfo;
+	headerInfo.context = NRO_ENTRADAS;
 	//esta funcion agrega o modifica una entrada en la lista e entradas y
 	// le envia el dato a almacenamiento
 	if (yaExisteClave(paqueteSet.clave)){
@@ -398,6 +405,8 @@ void realizarSet(int entradasNecesarias){
 	}else{
 		realizarSet_Agregar(entradasNecesarias);
 	}
+	headerInfo.mSize = entradasLibre();
+	sendHead(SOCKET_COORDINADOR, headerInfo);
 }
 
 void enviarOrdenDeCompactar(){
@@ -689,6 +698,7 @@ void reincorporar(char* claves){
 	}
 
 }
+
 
 bool yaExisteClave(char* clave){
 	bool claveBuscada(void* dato){

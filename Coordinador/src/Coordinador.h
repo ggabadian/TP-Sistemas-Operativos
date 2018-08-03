@@ -73,5 +73,8 @@ bool claveRegistrada(char*, t_instancia*);
 t_instancia* instanciaConSocket(int);
 void sendStatus(char*);
 t_instancia* distribuirStatus(char*);
+char* clavesAsociadas(t_instancia*);
+int nroClavesAsociadas(t_instancia*);
+int memClavesAsociadas(t_instancia*);
 
 #endif
