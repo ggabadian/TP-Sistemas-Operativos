@@ -297,8 +297,23 @@ void *mainProgram() {
 						if (header.context == ERROR_HEAD) {
 							close(i);
 							FD_CLR(i, &master); // remove from master set
-							idESICaido=
-							log_info(logPlanificador,"Se desconectó el ESI %d.\n",idESICaido);
+
+							if(algun_esi_es_socket(listos,i)){						//el esi esta en cola de listos
+								t_ESI* esiQuitado = remover_esi_con_socket(listos,i);
+								log_info(logPlanificador,"Se desconectó el ESI con ID: %d.\n",esiQuitado->idESI);
+								list_add(finalizados, esiQuitado);
+							} else if(running!=NULL && i == running->socket){			//el esi es el running
+								proximoESI=NULL;
+								hayQuePlanificar = true;
+								list_add(finalizados, running);
+								log_info(logPlanificador,"Se desconectó el ESI con ID: %d.\n",running->idESI);
+								hayQueEnviarOrdenDeEjecucion=true;
+							}else {														//el esi esta bloqueado
+								buscar_en_colas_y_remover_por_socket(i);
+							}
+
+							//idESICaido=
+							log_info(logPlanificador,"Se desconectó el ESI en el socket %d.\n",i);
 						} else {
 							// we got some data from an ESI
 							//char* clave = malloc(header.mSize); //esto no se por que lo habiamos puesto
@@ -963,6 +978,48 @@ t_ESI* remover_esi_con_id(t_list* lista, int idBuscado){
 	  }
 	return list_remove_by_condition(lista,condicionEsi);
 }
+
+void buscar_en_colas_y_remover_por_socket(int socketBuscado){
+
+	char* claveCopia;
+
+	void remover_de_cola_si_tiene_socket (char* clave , void* cola){
+		t_list *lista = ((t_queue*)cola)->elements;
+		if (algun_esi_es_socket(lista, socketBuscado)){
+			t_ESI* esiQuitado = remover_esi_con_socket(lista, socketBuscado);
+			list_add(finalizados, esiQuitado);
+			log_info(logPlanificador,"Se desconectó el ESI con ID: %d.\n",esiQuitado->idESI);
+
+			claveCopia=strdup(clave);
+
+		}
+
+	}
+
+	dictionary_iterator(colasBloqueados,remover_de_cola_si_tiene_socket);
+	if(queue_is_empty((t_queue*)dictionary_get(colasBloqueados,claveCopia))){
+		queue_destroy((t_queue*)dictionary_get(colasBloqueados,claveCopia));
+		dictionary_remove(colasBloqueados,claveCopia);
+	}
+	free(claveCopia);
+}
+
+bool algun_esi_es_socket(t_list *lista, int socketBuscado){
+	 bool condicionEsi(void* esi){
+		  int socket = ((t_ESI*)esi)->socket;
+		  return socket == socketBuscado;
+	  }
+	  return list_any_satisfy(lista,condicionEsi);
+}
+
+t_ESI* remover_esi_con_socket(t_list* lista, int socketBuscado){
+	bool condicionEsi(void* esi){
+		  int socket = ((t_ESI*)esi)->socket;
+		  return socket == socketBuscado;
+	  }
+	return list_remove_by_condition(lista,condicionEsi);
+}
+
 
 void bloquearESIConsola(t_ESI* esiQuitado,char* clave){
 	if(dictionary_has_key(colasBloqueados, clave)){						//si ya hay procesos encolados
