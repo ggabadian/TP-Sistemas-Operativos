@@ -62,5 +62,7 @@ void liberarTablaEntradas();
 void aumentarLRU(char* clave);
 void mostarAlmacenamiento();
 int main(int argc, char* argv[]);
+void aumentarCircular();
+
 
 #endif
