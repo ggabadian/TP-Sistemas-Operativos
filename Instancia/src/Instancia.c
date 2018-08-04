@@ -65,7 +65,7 @@ void test_recibirSet(char* clave, char* valor){
 	paqueteSet.sizeValor = strlen(valor);
 	printf("clave: %s\n", paqueteSet.clave);
 	realizarSet(entradasNecesarias(paqueteSet.valor));
-	free(valor);
+	//free(valor);
 }
 
 void conectarCoordinador(){
@@ -315,8 +315,10 @@ void realizarSet_Actualizar(int entradasNecesarias){
 		}
 		return false;
 	}
-	list_remove_by_condition(TABLA_ENTRADAS, esElDato);
-	free(dato); // Ya no se usa más así que se libera
+
+	//free(dato); // Ya no se usa más así que se libera
+	list_remove_and_destroy_by_condition(TABLA_ENTRADAS, esElDato,free);
+
 
 	realizarSet_Agregar(entradasNecesarias);
 }
@@ -471,7 +473,7 @@ void algoritmoCircular(){
 						}
 						return false;
 					}
-				list_remove_by_condition(TABLA_ENTRADAS, esElDato);
+				list_remove_and_destroy_by_condition(TABLA_ENTRADAS, esElDato,free);
 
 				aumentarCircular();
 				mateAuno = 0;
@@ -511,7 +513,7 @@ void algoritmoLRU(){
 				}
 				return false;
 			}
-		list_remove_by_condition(TABLA_ENTRADAS, esElDato);
+		list_remove_and_destroy_by_condition(TABLA_ENTRADAS, esElDato, free);
 	}
 }
 
@@ -554,7 +556,7 @@ void algoritmoBSU(){
 				}
 				return false;
 			}
-		list_remove_by_condition(TABLA_ENTRADAS, esElDato);
+		list_remove_and_destroy_by_condition(TABLA_ENTRADAS, esElDato,free);
 	}
 }
 
