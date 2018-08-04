@@ -4,6 +4,7 @@ int main(int argc, char* argv[]) {
 	int statusThread=1;
 	pthread_t threadDump;
 
+	pthread_mutex_init(&MUTEX, NULL);
 
 	cargarConfig(argv[1]);
 
@@ -31,52 +32,11 @@ int main(int argc, char* argv[]) {
 	PUNTERO_CIRCULAR = 0;
 	CONTROL_LRU = 0;
 
-	//para pruebas
-/*
-	CANTIDAD_ENTRADAS = 10;
-	TAMANIO_ENTRADAS = 10;
-	TABLA_ENTRADAS = list_create();
-	ALMACENAMIENTO = (char**) calloc(CANTIDAD_ENTRADAS, TAMANIO_ENTRADAS);
-	memset(ALMACENAMIENTO, '\0', sizeof(ALMACENAMIENTO[0][0])*CANTIDAD_ENTRADAS*TAMANIO_ENTRADAS);
-
-
-	test_recibirSet("raquel", "raquelita-nos-salva-con-sus-teses\0");
-	test_recibirSet("claudio", "pelado-bueno\0");
-	test_recibirSet("juani", "cabezon-tonto\0");
-	test_recibirSet("claudio", "pelado\0");
-	test_recibirSet("atomica2", "atomic\0");
-	test_recibirSet("juani", "cabezon-tonto-no-es-pero\0");
-
-	//reincorporar("claudio");
-
-	int i;
-
-	for(i=0; i<CANTIDAD_ENTRADAS; i++){
-				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-	}
-
-	test_recibirSet("perrito", "perrito-bueno");
-
-
-	for(i=0; i<CANTIDAD_ENTRADAS; i++){
-				printf("El valor del almacenamiento en la posicion [%d] es: %s\n", i,ALMACENAMIENTO[i]);
-	}
-*/
-
-	/*
-	puts("llego aca\n");
-	memset(&paqueteStore, 0, sizeof(t_store));
-	strcpy(paqueteStore.clave, "claudio");
-	realizarStore("claudio");
-*/
-	//valorEnDisco("claudio");
-
 	while(CONNECTED){ //espera que llegue una operacion
-		log_trace(LOG_INSTANCIA, "Disponible, esperando nueva operacion");
+		//log_trace(LOG_INSTANCIA, "Disponible, esperando nueva operacion");
 		recibirOperacion();
 	}
 
-	sleep(1);
 	log_destroy(LOG_INSTANCIA);
 	liberarTablaEntradas();
 	liberarAlmacenamiento();
@@ -144,11 +104,14 @@ void recibirOperacion(){
 		break;
 	case OPERACION_SET:
 		recvSet(SOCKET_COORDINADOR, &paqueteSet);
+		pthread_mutex_lock(&MUTEX);
 		realizarSet(entradasNecesarias(paqueteSet.valor));
+		pthread_mutex_unlock(&MUTEX);
 		log_trace(LOG_INSTANCIA,"SET-se setio la clave: %s , con el valor: %s", paqueteSet.clave, paqueteSet.valor);
 		break;
 	case OPERACION_STORE:
 		recv(SOCKET_COORDINADOR, &paqueteStore, header.mSize, 0);
+		pthread_mutex_lock(&MUTEX);
 		if (realizarStore(paqueteStore.clave)){
 			log_trace(LOG_INSTANCIA,"STORE- se guardo la clave %s", paqueteStore.clave);
 			aumentarLRU(paqueteStore.clave);
@@ -157,6 +120,7 @@ void recibirOperacion(){
 			header.context = STORE_FAIL;
 			log_error(LOG_INSTANCIA,"STORE - No se encontró la clave: %s", paqueteStore.clave);
 		}
+		pthread_mutex_unlock(&MUTEX);
 		sendHead(SOCKET_COORDINADOR, header);
 		break;
 	case REINCORPORACION_INSTANCIA:
@@ -187,7 +151,7 @@ void recibirOperacion(){
 		//procesa error
 		break;
 	default:
-		puts("Se desconoce el error");
+		log_info(LOG_INSTANCIA, "Se desconoce el header");
 		break;
 	}
 }
@@ -206,7 +170,10 @@ int entradasLibre(){
 void* atenderDump(){
 	while(CONNECTED){
 		sleep(INTERVALO_DUMP);
+		pthread_mutex_lock(&MUTEX);
 		realizarDump();
+		pthread_mutex_unlock(&MUTEX);
+		log_trace(LOG_INSTANCIA,"Se realizo el Dump");
 	}
 	return NULL;
 }
@@ -215,7 +182,6 @@ void realizarDump(){
 	void realizarDump_dato(void* dato){
 		if (((t_entrada*)dato) != NULL){
 			char* clave = ((t_entrada*)dato)->clave;
-			log_trace(LOG_INSTANCIA,"DUMP-se guarda en disco la clave: %s\n",clave);
 			realizarStore(clave);
 		}
 	}
@@ -288,59 +254,6 @@ void almacenarDato(int posicion, char* valor, int cantidadEntradas){
 		nEntrada++;
 	}
 	mostarAlmacenamiento();
-
-	//char* valorAgrabar;
-//int i;
-	//int nEntrada = 0;
-/*
-	for(i=0;i<cantidadEntradas;i++){
-		int tamanio = strlen(valor)+1;
-		if ( tamanio > TAMANIO_ENTRADAS  ){
-			char* stringAgrabar = malloc(TAMANIO_ENTRADAS);
-			memcpy(stringAgrabar, valor, TAMANIO_ENTRADAS-1);
-
-			int lenAlm = strlen(ALMACENAMIENTO[posicion+i]);
-			int lenStr = strlen(stringAgrabar);
-
-			printf("almacenamiento %d, string %d", lenAlm, lenStr);
-
-			strcpy(ALMACENAMIENTO[posicion+i],stringAgrabar);
-			free(stringAgrabar);
-
-			ALMACENAMIENTO[posicion + i][TAMANIO_ENTRADAS-1]='\0';
-			char* clave_auxiliar = string_substring_from(valor,TAMANIO_ENTRADAS -1);
-			strcpy(valor,clave_auxiliar);
-			free(clave_auxiliar);
-
-			valorAgrabar = string_substring( valor, 0, TAMANIO_ENTRADAS );
-			valor        = string_substring_from( valor, TAMANIO_ENTRADAS );
-			*/
-	/*
-		} else {
-			memcpy(ALMACENAMIENTO[posicion + i],valor,tamanio);
-			ALMACENAMIENTO[posicion + i][tamanio-1]='\0';
-
-			valorAgrabar = valor ;
-			seguir = false;
-			*/
-		//}
-
-		/*
-		ALMACENAMIENTO[posicion+nEntrada]= valorAgrabar;
-		ALMACENAMIENTO[posicion+nEntrada][strlen(valorAgrabar)]= '\0';
-		nEntrada++;
-		*/
-	//}
-/*
-	if(valor != NULL){
-		free(valor);
-	}*/
-	//liberar(valor);
-	//liberar(valorAgrabar);
-	//free(valor);
-	//free(valorAgrabar);
-
-	//creo que se deberia liberar aca, pero si lo hago se me rompe el printf y no se pq
 }
 
 void aumentarLRU(char* clave){
@@ -538,7 +451,7 @@ void algoritmoCircular(){
 	t_entrada* dato;
 	char* clave;
 
-	log_info(LOG_INSTANCIA, "Se corre el algoritmo Circular");
+	//log_info(LOG_INSTANCIA, "Se corre el algoritmo Circular");
 	while(mateAuno){
 		if(ALMACENAMIENTO[PUNTERO_CIRCULAR]== NULL){
 			aumentarCircular();
@@ -574,7 +487,7 @@ void algoritmoLRU(){
 	t_entrada* datoAmatar = NULL;
 	int minimo = 1000000;
 
-	log_info(LOG_INSTANCIA, "Se corre el algoritmo LRU");
+	//log_info(LOG_INSTANCIA, "Se corre el algoritmo LRU");
 
 	void minimoLRU(void* dato){
 		if (((t_entrada*)dato)->cantidadUtilizada == 1){
@@ -607,7 +520,7 @@ void algoritmoBSU(){
 	int maximo = 0;
 	int controlUltimoSelecto;
 
-	log_info(LOG_INSTANCIA, "Se corre el algoritmo BSU");
+	//log_info(LOG_INSTANCIA, "Se corre el algoritmo BSU");
 
 	void maximoBSU(void* dato){
 		if (((t_entrada*)dato)->cantidadUtilizada == 1){
@@ -700,7 +613,6 @@ void compactar(){
 			}
 		}
 	}
-	mostarAlmacenamiento();
 }
 
 void mostarAlmacenamiento(){

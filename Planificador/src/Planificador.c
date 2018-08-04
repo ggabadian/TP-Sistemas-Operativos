@@ -20,7 +20,6 @@ t_ESI *running;
 fd_set master;
 
 int main(int argc, char* argv[]) {
-
 	int statusConsola, statusMainProgram;
 	pthread_t tConsola, tMainProgram;
 
@@ -89,7 +88,7 @@ int main(int argc, char* argv[]) {
 void *mainProgram() {
 
 	bool hayQuePlanificar=false;
-	log_info(logPlanificador,"Se seteó hayQuePlanificar=false\n");
+	//log_info(logPlanificador,"Se seteó hayQuePlanificar=false\n");
 	bool hayQueEnviarOrdenDeEjecucion=false;
 	bool conDesalojo;
 
@@ -177,12 +176,12 @@ void *mainProgram() {
 							if(list_is_empty(listos) && running==NULL){
 								hayQueEnviarOrdenDeEjecucion=true; //cuando se conecta el primer esi, si o si hay que planificar y enviar orden
 								hayQuePlanificar=true;
-								log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+								//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 							}
 							agregarNuevoESIAColaDeListos(socketCliente, idESI); //Agrego el nuevo ESI a la cola de listos
 							if (conDesalojo){
 								hayQuePlanificar=true;
-								log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+								//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 							}
 						}
 
@@ -213,8 +212,8 @@ void *mainProgram() {
 									header.context=okESI;
 									header.mSize=0;
 									sendHead(coordinadorSocket,header);
-									log_info(logPlanificador,"Nadie tenia tomada la clave, se aprueba el GET.");
-									log_info(logPlanificador,"Se entrego la clave %s al ESI %d.",paqueteGet.clave,*(int*)dictionary_get(clavesBloqueadas,paqueteGet.clave));
+									//log_info(logPlanificador,"Nadie tenia tomada la clave, se aprueba el GET.");
+									log_info(logPlanificador,"Se entregó la clave %s al ESI %d.",paqueteGet.clave,*(int*)dictionary_get(clavesBloqueadas,paqueteGet.clave));
 
 								} else if ((*(int*) (dictionary_get(clavesBloqueadas,paqueteGet.clave))) == paqueteGet.idESI) { //el esi que pide es el que tiene tomada la clave (la esta pidiendo por segunda vez
 									header.context=okESI;
@@ -269,7 +268,7 @@ void *mainProgram() {
 									bool seDesbloqueo = desbloquearDeCola(paqueteStore.clave); //cuando se hace un store hay que pasar a ready el primer esi encolado en espera de esa clave
 									if(seDesbloqueo && conDesalojo){ //si es con desalojo y se desbloquea un esi, hay que replanificar
 										hayQuePlanificar=true;
-										log_info(logPlanificador,"Se seteó hayQuePlanificar=true");
+										//log_info(logPlanificador,"Se seteó hayQuePlanificar=true");
 									}
 									log_info(logPlanificador,"El ESI ya tenia tomada la clave, se aprueba el STORE\n");
 								} else { //otro esi tiene bloqueada la clave o no la tiene nadie
@@ -313,7 +312,7 @@ void *mainProgram() {
 							}
 
 							//idESICaido=
-							log_info(logPlanificador,"Se desconectó el ESI en el socket %d.\n",i);
+							//log_info(logPlanificador,"Se desconectó el ESI en el socket %d.\n",i);
 						} else {
 							// we got some data from an ESI
 							//char* clave = malloc(header.mSize); //esto no se por que lo habiamos puesto
@@ -322,7 +321,7 @@ void *mainProgram() {
 								//recv(i, clave, header.mSize, 0);
 								log_info(logPlanificador,"El ESI %d me informa que queda bloqueado esperando la clave %s.\n",running->idESI, paqueteGet.clave);
 								hayQuePlanificar=true;
-								log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+								//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 								proximoESI=NULL;
 								running=NULL;
 								break;
@@ -331,7 +330,7 @@ void *mainProgram() {
 								break;
 							case terminatedESI:
 								hayQuePlanificar=true;
-								log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+								//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 								proximoESI=NULL;
 								close(i);
 								log_info(logPlanificador,"El esi %d termino de correr su script. \n",running->idESI);
@@ -346,7 +345,7 @@ void *mainProgram() {
 								finalizarESI(running); //libera recursos y manda a lista de finalizados
 								FD_CLR(i,&master);
 								hayQuePlanificar=true;
-								log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+								//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 								running=NULL;
 								break;
 							default:
@@ -362,7 +361,7 @@ void *mainProgram() {
 		if(runningFinalizadoPorConsola && hayQueEnviarOrdenDeEjecucion){
 			finalizarESI(running);
 			hayQuePlanificar=true;
-			log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+			//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 			runningFinalizadoPorConsola=false;
 			sleep(1);
 		}
@@ -370,7 +369,7 @@ void *mainProgram() {
 		if(runningBloqueadoPorConsola && hayQueEnviarOrdenDeEjecucion){
 			bloquearESIConsola(running,claveGlobal);
 			hayQuePlanificar=true;
-			log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
+			//log_info(logPlanificador,"Se seteó hayQuePlanificar=true\n");
 			runningBloqueadoPorConsola=false;
 			free(claveGlobal);
 			//running=NULL;
@@ -383,7 +382,7 @@ void *mainProgram() {
 			proximoESI=planificar();
 			if(proximoESI!=NULL){
 				hayQuePlanificar=false;
-				log_info(logPlanificador,"Se seteó hayQuePlanificar=false\n");
+				//log_info(logPlanificador,"Se seteó hayQuePlanificar=false\n");
 			}
 		} else if(!pausarPlanificador) {
 			//log_info(logPlanificador,"hayQuePlanificar==false\n");
@@ -416,20 +415,20 @@ void agregarNuevoESIAColaDeListos(int socketESI, int id) {
 	log_info(logPlanificador,"La estimacion del (nuevo) esi %d es %f.",nuevoESI->idESI, nuevoESI->estimado);
 	nuevoESI->listoDesde = systemClock;
 	nuevoESI->real = 0;
-	log_info(logPlanificador,"Se puso en 0 el real del esi %d. (nuevo ESI).\n",nuevoESI->idESI);
+	//log_info(logPlanificador,"Se puso en 0 el real del esi %d. (nuevo ESI).\n",nuevoESI->idESI);
 
 	list_add(listos, nuevoESI);
 }
 
 void agregarESIAColaDeListos(t_ESI *esi) {
-	log_info(logPlanificador, "La rafaga anterior del esi %d duró %d",esi->idESI,esi->real);
-	log_info(logPlanificador,"real: %d. EstimadoAnterior: %f. ALFA: %d",esi->real, esi->estimado, ALFA );
+	//log_info(logPlanificador, "La rafaga anterior del esi %d duró %d",esi->idESI,esi->real);
+	//log_info(logPlanificador,"real: %d. EstimadoAnterior: %f. ALFA: %d",esi->real, esi->estimado, ALFA );
 	esi->estimado = (float)(ALFA / 100.0) * (float)(esi->real) + (float)((1 - (ALFA / 100.0)) * esi->estimado);
 	esi->remaining = esi->estimado;
-	log_info(logPlanificador,"La nueva estimacion del (pasado a ready) esi %d es %f",esi->idESI, esi->estimado);
+	log_info(logPlanificador,"(Pasado a ready) La nueva estimacion del esi %d es %f",esi->idESI, esi->estimado);
 	esi->listoDesde = systemClock;
 	esi->real = 0;
-	log_info(logPlanificador,"Se puso en 0 el real del esi %d. (Pasado a listo).\n",esi->idESI);
+	//log_info(logPlanificador,"Se puso en 0 el real del esi %d. (Pasado a listo).\n",esi->idESI);
 
 	list_add(listos, esi);
 }
@@ -590,7 +589,7 @@ void enviarOrdenDeEjecucion(){
 		systemClock++;
 		running=proximoESI;
 		running->real+=1;
-		log_info(logPlanificador,"Es la %d° operacion del ESI %d.",running->real,running->idESI);
+		//log_info(logPlanificador,"Es la %d° operacion del ESI %d.",running->real,running->idESI);
 	}
 }
 
@@ -749,6 +748,7 @@ void *consola() {
 				printf("Se agregó el ESI: %d a la cola de listos", esi);
 			} else{
 				printf("No quedan procesos bloqueados para la clave %s. Se libera la misma.", clave);
+				dictionary_remove(clavesBloqueadas,clave);
 			}
 			printf("\n");
 			break;
@@ -873,7 +873,7 @@ void buscarDeadlock(t_list* lista, char* clave){
 		char* claveQueEsperaElEsiTomador = buscarEnColasYRetornar(esiTomador);
 
 		if(claveQueEsperaElEsiTomador!=NULL && *(int*)dictionary_get(clavesBloqueadas,claveQueEsperaElEsiTomador)==id){
-			printf("Hay deadlock entre los ESIs %d y %d.\n", esiTomador, id);
+			printf("Hay deadlock entre los ESIs: %d, %d,\n", esiTomador, id);
 		}
 	}
 	list_iterate(lista, elementoDeadlock);

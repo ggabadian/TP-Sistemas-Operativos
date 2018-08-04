@@ -130,7 +130,7 @@ void* threadConsola(void* socket) {
 
 
 	close(socketConsola);
-	log_trace(logCoordinador, "Se cerró la conexión con la consola");
+	log_trace(logCoordinador, "Se cerró la conexión con el planificador");
 
 	return NULL;
 }
@@ -162,18 +162,14 @@ void* threadESI(void* socket) {
 
 				// Recibe respuesta del planificador
 				header=recvHead(socketPlanificador);
-				puts("Recibi algo del planif");
 				switch (header.context){
 					case okESI:
 						sendOkESI(socketESI);
-						puts("ok");
 						break;
 					case blockedESI:
 						sendBlockedESI(socketESI);
-						puts("block");
 						break;
 					default:
-						puts("def");
 						break;
 				}
 				break;
@@ -368,7 +364,7 @@ bool distribuirSet(t_set paquete){
 	instancia = instanciaConClave(paquete.clave);
 	if(instancia != NULL){
 		if(!desconectado(instancia->socket)){
-			puts("instanciaConClave");
+			//puts("instanciaConClave");
 			enviarSet(instancia, paquete);
 			log_info(logCoordinador, "(SET) Instancia elegida: %s (Entradas libres: %d).", instancia->nombre, instancia->entradasLibres);
 			return true;
